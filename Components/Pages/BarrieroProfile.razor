@@ -1,0 +1,67 @@
+@page "/barriero/{Name}"
+@using BarriolympicsRadzen.Controllers
+@using BarriolympicsRadzen.Data.Models
+@inject NavigationManager navManager
+@inject DatabaseController db
+<RadzenStack Style="margin-bottom: 25px" Orientation="Radzen.Orientation.Vertical">
+    <RadzenCard Style="height: auto; width: 100%" Variant="Radzen.Variant.Filled">
+        <RadzenRow Style="width: 100%; height: auto">
+            <RadzenColumn Size="8">
+                <RadzenRow>
+                    <RadzenText Text="@_barriero.DisplayName" TextStyle="Radzen.Blazor.TextStyle.H3" />
+                </RadzenRow>
+                <RadzenRow>
+                    <RadzenText Text="El slogan aca" TextStyle="Radzen.Blazor.TextStyle.H5" />
+                </RadzenRow>
+                <RadzenRow Style="height: auto">
+                    <RadzenLabel Style="width: auto; max-width: 100%; font-size: 16px" Text="@_barriero.Descripcion" />
+                </RadzenRow>
+            </RadzenColumn>
+            <RadzenColumn Size="4">
+                <RadzenRow Style="height: 260px">
+                    <RadzenImage 
+                    Style="@GetGradientColors()" 
+                    Path="@_barriero.Imagen">
+                    </RadzenImage>                </RadzenRow>
+            </RadzenColumn>
+        </RadzenRow>
+    </RadzenCard>
+</RadzenStack>
+<RadzenStack Style="margin-bottom: 25px">
+    <RadzenCard>
+        <RadzenRow>
+            <RadzenText Text="Vitrina" TextStyle="Radzen.Blazor.TextStyle.H4" />
+        </RadzenRow>
+    </RadzenCard>
+</RadzenStack>
+
+@code{
+    [Parameter]
+    public string Name { get; set; }
+    private Barriero? _barriero { get; set; }
+
+
+    protected override Task OnParametersSetAsync()
+    {
+        _barriero = db.GetBarriero(Name);
+        if(_barriero == null)
+        {
+            navManager.NavigateTo("/");
+        }
+        return base.OnInitializedAsync();
+    }
+
+    private string GetGradientColors()
+    {
+        if (string.IsNullOrEmpty(_barriero.Color))
+        {
+            return "gray, lightgray, white";
+        }
+
+        var baseColor = _barriero.Color;
+
+        var gradients= $"{baseColor}, lighten({baseColor}, 30%), darken({baseColor}, 30%)";
+        string css = $"width: 260px; height: 260px; margin: auto; border-radius: 50%; padding: 5px; background: radial-gradient(circle, {gradients}; border: 5px solid transparent;";
+        return css;
+    }
+}

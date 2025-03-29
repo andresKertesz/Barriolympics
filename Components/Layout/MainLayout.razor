@@ -1,0 +1,68 @@
+@using BarriolympicsRadzen.Controllers
+@inherits LayoutComponentBase
+@inject CookieThemeService CookieThemeService
+@inject DatabaseController db
+@inject NavigationManager navigationManager
+<RadzenComponents />
+
+<RadzenLayout style="grid-template-areas: 'rz-sidebar rz-header' 'rz-sidebar rz-body';">
+    <RadzenHeader Style="
+    color: #0000ff;
+    background: linear-gradient(135deg, #000922 25%, #001133 75%);
+    padding: 12px;
+    font-size: 1.2rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    border-bottom: 3px solid #0000ff;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.3);
+    letter-spacing: 1px;">
+        <RadzenRow JustifyContent="JustifyContent.Start" AlignItems="AlignItems.Center" Gap="0" Style="width: 100%; height: 100%; background-color: rgba(63, 118, 255, 0)">
+            <RadzenColumn Size="1" Style="height: 100%">
+                <RadzenRow Style="width: 60px; height: 60px">
+                    <RadzenImage Style="width: 100%; height: 100%" Path="images/logo.png"></RadzenImage>
+                </RadzenRow>
+            </RadzenColumn>
+            <RadzenColumn Size="11">
+                <RadzenRow AlignItems="AlignItems.End" Style="width:100%;height:100%">
+                    <RadzenMenu Style="background-color: transparent; color: #ffffff;margin-left:auto; margin-right:2%" ClickToOpen="false">
+
+                        <RadzenMenuItem Text="Competencias" Icon="Trophy" Style="--rz-menu-top-item-color: white;">
+                            @foreach (var comp in db.GetTipoEventos())
+                            {
+                                <RadzenMenuItem Icon="@comp.Icon" Text="@comp.Nombre" Style="background"></RadzenMenuItem>
+                            }
+                        </RadzenMenuItem>
+                        <RadzenMenuItem Text="Juegos" Icon="Games" Style="--rz-menu-top-item-color: white;">
+                            @foreach (var juego in db.GetTipoJuegos())
+                            {
+                                <RadzenMenuItem Icon="@juego.Icon" Text="@juego.Nombre" Style="background"></RadzenMenuItem>
+                            }
+                        </RadzenMenuItem>
+                        <RadzenMenuItem Text="Barrieros" Icon="Person" Style="--rz-menu-top-item-color: white;">
+                            @foreach(var barrio in db.GetBarrieros())
+                            {
+                                <RadzenMenuItem Icon="@barrio.Icon"  Click="()=>BarrieroClicked(barrio.Alias)"  Text="@barrio.DisplayName" Style="background"></RadzenMenuItem>
+                            }
+                        </RadzenMenuItem>
+
+                    </RadzenMenu>
+                </RadzenRow>
+            </RadzenColumn>
+        </RadzenRow>
+    </RadzenHeader>
+    <RadzenBody Expanded="@sidebarExpanded" Style="background-color: rgba(255, 66, 66, 0)">
+        <RadzenRow class="rz-mx-auto rz-px-4 rz-pt-2 rz-pt-md-4 rz-pt-lg-6 rz-pt-xl-12 rz-pb-2 rz-pb-lg-12" Style="max-width: 1440px;">
+            <RadzenColumn Size="12">
+                @Body
+            </RadzenColumn>
+        </RadzenRow>
+    </RadzenBody>
+</RadzenLayout>
+
+@code{
+    private async Task BarrieroClicked(string DisplayName)
+    {
+        navigationManager.NavigateTo($"/Barriero/{DisplayName}");
+        StateHasChanged();
+    }
+}
