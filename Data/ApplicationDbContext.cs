@@ -63,6 +63,11 @@ public partial class ApplicationDbContext : DbContext
                 .IsRequired()
                 .HasMaxLength(1000)
                 .IsUnicode(false);
+            entity.Property(e => e.FraseCelebre)
+                .IsRequired()
+                .HasMaxLength(5000)
+                .IsUnicode(false)
+                .HasDefaultValue("No tiene.");
             entity.Property(e => e.Icon)
                 .IsRequired()
                 .HasMaxLength(50)
@@ -81,7 +86,6 @@ public partial class ApplicationDbContext : DbContext
         {
             entity.Property(e => e.Id).ValueGeneratedNever();
             entity.Property(e => e.Imagen)
-                .IsRequired()
                 .HasMaxLength(256)
                 .IsUnicode(false);
             entity.Property(e => e.Nombre)
@@ -200,8 +204,8 @@ public partial class ApplicationDbContext : DbContext
                 .IsUnicode(false);
             entity.Property(e => e.Nombre)
                 .IsRequired()
-                .HasMaxLength(10)
-                .IsFixedLength();
+                .HasMaxLength(150)
+                .IsUnicode(false);
         });
 
         modelBuilder.Entity<TipoJuego>(entity =>

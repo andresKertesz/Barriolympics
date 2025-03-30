@@ -15,6 +15,8 @@ public partial class Barriero
 
     public string FormatoNombre { get; set; }
 
+    public string FraseCelebre { get; set; }
+
     public string Descripcion { get; set; }
 
     public string Color { get; set; }

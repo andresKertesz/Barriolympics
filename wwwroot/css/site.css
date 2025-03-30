@@ -26,7 +26,7 @@ body {
     color: var(--rz-text-color);
     font-size: var(--rz-body-font-size);
     line-height: var(--rz-body-line-height);
-    background-color: var(--rz-body-background-color);
+    background-color: green;
 }
 
 .rz-body {

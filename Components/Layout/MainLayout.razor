@@ -2,6 +2,7 @@
 @inherits LayoutComponentBase
 @inject CookieThemeService CookieThemeService
 @inject DatabaseController db
+@inject StyleController bs
 @inject NavigationManager navigationManager
 <RadzenComponents />
 
@@ -41,7 +42,7 @@
                         <RadzenMenuItem Text="Barrieros" Icon="Person" Style="--rz-menu-top-item-color: white;">
                             @foreach(var barrio in db.GetBarrieros())
                             {
-                                <RadzenMenuItem Icon="@barrio.Icon"  Click="()=>BarrieroClicked(barrio.Alias)"  Text="@barrio.DisplayName" Style="background"></RadzenMenuItem>
+                                <RadzenMenuItem Icon="@barrio.Icon"  Click="()=>BarrieroClicked(barrio.Alias)"  Text="@barrio.Alias" Style="background"></RadzenMenuItem>
                             }
                         </RadzenMenuItem>
 
@@ -50,7 +51,7 @@
             </RadzenColumn>
         </RadzenRow>
     </RadzenHeader>
-    <RadzenBody Expanded="@sidebarExpanded" Style="background-color: rgba(255, 66, 66, 0)">
+    <RadzenBody Style="@bs.BodyStyle">
         <RadzenRow class="rz-mx-auto rz-px-4 rz-pt-2 rz-pt-md-4 rz-pt-lg-6 rz-pt-xl-12 rz-pb-2 rz-pb-lg-12" Style="max-width: 1440px;">
             <RadzenColumn Size="12">
                 @Body
@@ -60,9 +61,21 @@
 </RadzenLayout>
 
 @code{
+    protected override Task OnInitializedAsync()
+    {
+        bs.OnStyleChanged += StateHasChanged;
+        return base.OnInitializedAsync();
+    }
+
+    public void Dispose()
+    {
+        bs.OnStyleChanged -= StateHasChanged;
+    }
+
     private async Task BarrieroClicked(string DisplayName)
     {
         navigationManager.NavigateTo($"/Barriero/{DisplayName}");
         StateHasChanged();
     }
+
 }

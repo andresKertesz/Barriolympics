@@ -1,5 +1,6 @@
 ﻿using BarriolympicsRadzen.Data;
 using BarriolympicsRadzen.Data.Models;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace BarriolympicsRadzen.Controllers
 {
@@ -32,5 +33,20 @@ namespace BarriolympicsRadzen.Controllers
             return _dbContext.TipoJuegos.ToList();
         }
 
-    }
-}
+        public List<Copa> GetBarriosGanadas(Guid guid)
+        {
+            return _dbContext.Copas.Where(x => x.BarrieroId == guid).
+                Where(x=>x.Evento.Competencia.TipoNavigation.Nombre == "Barriolympics").ToList();
+        }
+
+        public List<Copa> GetCopasFromUser(Guid userId)
+        {
+            return _dbContext.Copas.Where(x => x.BarrieroId.Equals(userId)).ToList();
+        }
+
+        public TipoCopa GetTipoCopa(Guid copaId)
+        {
+            return _dbContext.TipoCopas.Where(x => x.Id.Equals(copaId)).FirstOrDefault();
+        }
+    }   
+}   

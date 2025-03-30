@@ -1,46 +1,119 @@
 @page "/barriero/{Name}"
+@using BarriolympicsRadzen.Components.Controls
 @using BarriolympicsRadzen.Controllers
 @using BarriolympicsRadzen.Data.Models
+@using BarriolympicsRadzen.Helpers
+@inject StyleController style
 @inject NavigationManager navManager
 @inject DatabaseController db
 <RadzenStack Style="margin-bottom: 25px" Orientation="Radzen.Orientation.Vertical">
-    <RadzenCard Style="height: auto; width: 100%" Variant="Radzen.Variant.Filled">
-        <RadzenRow Style="width: 100%; height: auto">
-            <RadzenColumn Size="8">
+    <RadzenCard Variant="Radzen.Variant.Filled" Style="width: 100%; height: auto; max-width: 1920px">
+        <RadzenRow Style="width: 100%; height: auto; display: flex; flex-wrap: wrap; align-items: stretch;">
+            <RadzenColumn Size="9" Style="display: flex; flex-direction: column; justify-content: space-between; height: auto">
                 <RadzenRow>
-                    <RadzenText Text="@_barriero.DisplayName" TextStyle="Radzen.Blazor.TextStyle.H3" />
+                    <RadzenText Text="@_barriero.DisplayName" TextStyle="Radzen.Blazor.TextStyle.H3"
+                                Style="max-width: 100%; width: auto; word-break: break-word; height: 100%; margin-top: auto" />
+                    @foreach(var barriosGanadas in db.GetBarriosGanadas(_barriero.Id))
+                    {
+                        //<RadzenIcon Icon="star" Style="height: 35px; margin-top: auto; margin-bottom: auto" IconStyle="Radzen.IconStyle.Primary" IconColor="gold"></RadzenIcon>
+                        <RadzenImage Style="width: 32px; height: 32px" Path="/images/estrella.png"></RadzenImage>
+                    }
                 </RadzenRow>
                 <RadzenRow>
-                    <RadzenText Text="El slogan aca" TextStyle="Radzen.Blazor.TextStyle.H5" />
+                    <RadzenText Text="@Quote" TextStyle="Radzen.Blazor.TextStyle.H6"
+                                Style="font-style: italic; word-break: break-word;" TagName="Radzen.Blazor.TagName.Div" />
                 </RadzenRow>
-                <RadzenRow Style="height: auto">
-                    <RadzenLabel Style="width: auto; max-width: 100%; font-size: 16px" Text="@_barriero.Descripcion" />
+                <RadzenRow Style="flex-grow: 1; width: 100%" RowGap="2">
+                    <RadzenText Style="width: 100%; max-width: 100%; font-size: 18px; max-height: 130px; overflow-y: auto; display: block; white-space: pre-line; height: auto
+                                       overflow-y: auto; display: block; white-space: pre-line; margin-top:auto;margin-bottom:auto"
+                                Text="@_barriero.Descripcion" />
+                    <RadzenRow Style="width: 100%; height: 30px">
+                        <RadzenLabel Text="@Prestigio" Style="font-weight: bolder" />
+                        <RadzenLabel Text="@CopasString" Style="font-weight: bolder" />
+                    </RadzenRow>
                 </RadzenRow>
             </RadzenColumn>
-            <RadzenColumn Size="4">
-                <RadzenRow Style="height: 260px">
-                    <RadzenImage 
-                    Style="@GetGradientColors()" 
-                    Path="@_barriero.Imagen">
-                    </RadzenImage>                </RadzenRow>
+
+            @* IMAGE COLUMN *@
+            <RadzenColumn Size="3" Style="display: flex; justify-content: center; align-items: flex-end;">
+                <RadzenImage Path="@_barriero.Imagen"
+                             Style="height: 260px; width: 230px; max-width: 100%; object-fit: contain" />
             </RadzenColumn>
         </RadzenRow>
     </RadzenCard>
 </RadzenStack>
+    
 <RadzenStack Style="margin-bottom: 25px">
-    <RadzenCard>
+    <RadzenCard Style="width: 100%; max-width: 1920px">
         <RadzenRow>
             <RadzenText Text="Vitrina" TextStyle="Radzen.Blazor.TextStyle.H4" />
+        </RadzenRow>
+
+        <RadzenRow>
+            <RadzenStack Style="margin-top: 30px;width: 100%; height: auto" Orientation="Radzen.Orientation.Horizontal" AlignItems="Radzen.AlignItems.Center" Wrap="Radzen.FlexWrap.Wrap">
+                @if(Copas.Count > 0)
+                {
+                    
+                    @foreach (var copaGanada in Copas)
+                    {
+
+                        <RadzenRow Style="width: 200px; height: auto; background: linear-gradient(135deg, #f7f7f7, #e0e0e0);
+                       border-radius: 10px; box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2); padding: 10px;
+                       display: flex; flex-direction: column; align-items: center; margin-left:auto;margin-right:auto">
+
+                            @* IMAGE *@
+                            <RadzenRow Style="width: 100%; height: 200px; border-radius: 8px; overflow: hidden; background: white;
+                          display: flex; justify-content: center; align-items: center;">
+                                <RadzenImage Style="width: 100%; height: 100%; object-fit: contain; transition: transform 0.3s ease-in-out;"
+                                             Path="@GetImage(copaGanada.TipoId)"
+                                             Class="hover-zoom">
+                                </RadzenImage>
+                            </RadzenRow>
+
+                            @* LABEL *@
+                            <RadzenRow Style="width: 100%; padding: 8px 0; margin-top: 8px;">
+                                <RadzenLabel Style="width: 100%; text-align: center; font-weight: bold; font-size: 1rem; color: #333;
+                                text-transform: uppercase; letter-spacing: 1px; text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);"
+                                             Text="@copaGanada.Nombre">
+                                </RadzenLabel>
+                            </RadzenRow>
+                            </RadzenRow>
+                    }
+
+                }
+                else
+                {
+                    <RadzenText Text="No tiene ni una copa... Penoso..."></RadzenText>   
+                }
+            </RadzenStack>
         </RadzenRow>
     </RadzenCard>
 </RadzenStack>
 
+@* HOVER EFFECTS *@
+<style>
+    .hover-zoom:hover {
+        transform: scale(1.05);
+    }
+</style>
 @code{
     [Parameter]
     public string Name { get; set; }
     private Barriero? _barriero { get; set; }
+    private List<Copa> Copas { get; set; }
+    private Dictionary<Guid, TipoCopa> TipoCopasCache { get; set; } = new();
 
+    private TipoCopa GetTipoCopa(Guid guid)
+    {
+        if (TipoCopasCache.ContainsKey(guid))
+        {
+            return TipoCopasCache[guid];
+        }
 
+        TipoCopasCache[guid] = db.GetTipoCopa(guid);
+        return TipoCopasCache[guid];
+    }
+    private string Quote => $"\"{_barriero.FraseCelebre}\"";
     protected override Task OnParametersSetAsync()
     {
         _barriero = db.GetBarriero(Name);
@@ -48,20 +121,34 @@
         {
             navManager.NavigateTo("/");
         }
+        Copas = db.GetCopasFromUser(_barriero.Id);
+        style.SetBackgroundGradient(_barriero.Color);
+        StateHasChanged();
         return base.OnInitializedAsync();
     }
 
-    private string GetGradientColors()
+    private string CardStyle => GetCardStyle();
+    private string GetCardStyle()
     {
+
         if (string.IsNullOrEmpty(_barriero.Color))
         {
             return "gray, lightgray, white";
         }
 
         var baseColor = _barriero.Color;
+        var lighter = ColorUtils.LightenColor(baseColor,0.2f);
+        return $"height: auto; width: 100%;background: {lighter};background: linear - gradient(90deg, {baseColor} 0 %,{lighter} 40 %); ";
+    }
+    private string GetImage(Guid id)
+    {
+        return GetTipoCopa(id).Imagen;
+    }
 
-        var gradients= $"{baseColor}, lighten({baseColor}, 30%), darken({baseColor}, 30%)";
-        string css = $"width: 260px; height: 260px; margin: auto; border-radius: 50%; padding: 5px; background: radial-gradient(circle, {gradients}; border: 5px solid transparent;";
-        return css;
+    private string Prestigio => $"Prestigio: {PrestigioTotal()}";
+    private string CopasString => $"Copas: {Copas.Count}";
+
+    private int PrestigioTotal(){
+        return Copas.Sum(x=>GetTipoCopa(x.TipoId).Prestigio+x.Aura);
     }
 }

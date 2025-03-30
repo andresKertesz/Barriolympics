@@ -12,6 +12,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 builder.Services.AddRazorComponents()
       .AddInteractiveServerComponents().AddHubOptions(options => options.MaximumReceiveMessageSize = 10 * 1024 * 1024);
 builder.Services.AddScoped<DatabaseController>();
+builder.Services.AddScoped<StyleController>();
 builder.Services.AddControllers();
 builder.Services.AddRadzenComponents();
 
