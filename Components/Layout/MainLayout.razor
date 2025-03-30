@@ -20,7 +20,7 @@
         <RadzenRow JustifyContent="JustifyContent.Start" AlignItems="AlignItems.Center" Gap="0" Style="width: 100%; height: 100%; background-color: rgba(63, 118, 255, 0)">
             <RadzenColumn Size="1" Style="height: 100%">
                 <RadzenRow Style="width: 60px; height: 60px">
-                    <RadzenImage Style="width: 100%; height: 100%" Path="images/logo.png"></RadzenImage>
+                    <RadzenImage Style="width: 100%; height: 100%" Path="images/logo.png" Click="LogoClick"></RadzenImage>
                 </RadzenRow>
             </RadzenColumn>
             <RadzenColumn Size="11">
@@ -71,7 +71,10 @@
     {
         bs.OnStyleChanged -= StateHasChanged;
     }
-
+    private void LogoClick()
+    {
+        navigationManager.NavigateTo($"/");
+    }
     private async Task BarrieroClicked(string DisplayName)
     {
         navigationManager.NavigateTo($"/Barriero/{DisplayName}");
