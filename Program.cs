@@ -3,6 +3,7 @@ using BarriolympicsRadzen.Components;
 using Microsoft.EntityFrameworkCore;
 using BarriolympicsRadzen.Data;
 using BarriolympicsRadzen.Controllers;
+using Blazored.LocalStorage;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,6 +14,8 @@ builder.Services.AddRazorComponents()
       .AddInteractiveServerComponents().AddHubOptions(options => options.MaximumReceiveMessageSize = 10 * 1024 * 1024);
 builder.Services.AddScoped<DatabaseController>();
 builder.Services.AddScoped<StyleController>();
+builder.Services.AddBlazoredLocalStorage();
+builder.Services.AddScoped<AuthenticationController>();
 builder.Services.AddControllers();
 builder.Services.AddRadzenComponents();
 
