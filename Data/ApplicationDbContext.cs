@@ -34,6 +34,10 @@ public partial class ApplicationDbContext : DbContext
 
     public virtual DbSet<TipoJuego> TipoJuegos { get; set; }
 
+    public virtual DbSet<TokenLogin> TokenLogins { get; set; }
+
+    public virtual DbSet<Usuario> Usuarios { get; set; }
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         => optionsBuilder.UseSqlServer("Name=DefaultConnection");
 
@@ -223,6 +227,39 @@ public partial class ApplicationDbContext : DbContext
             entity.Property(e => e.Nombre)
                 .IsRequired()
                 .HasMaxLength(500)
+                .IsUnicode(false);
+        });
+
+        modelBuilder.Entity<TokenLogin>(entity =>
+        {
+            entity.ToTable("TokenLogin");
+
+            entity.Property(e => e.Id).ValueGeneratedNever();
+            entity.Property(e => e.ValidoDesde).HasColumnType("datetime");
+            entity.Property(e => e.ValidoHasta).HasColumnType("datetime");
+
+            entity.HasOne(d => d.Usuario).WithMany(p => p.TokenLogins)
+                .HasForeignKey(d => d.UsuarioId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_TokenLogin_Usuario");
+        });
+
+        modelBuilder.Entity<Usuario>(entity =>
+        {
+            entity.ToTable("Usuario");
+
+            entity.Property(e => e.Id).ValueGeneratedNever();
+            entity.Property(e => e.Icon)
+                .IsRequired()
+                .HasMaxLength(50)
+                .IsUnicode(false);
+            entity.Property(e => e.Password)
+                .IsRequired()
+                .HasMaxLength(500)
+                .IsUnicode(false);
+            entity.Property(e => e.Username)
+                .IsRequired()
+                .HasMaxLength(50)
                 .IsUnicode(false);
         });
 

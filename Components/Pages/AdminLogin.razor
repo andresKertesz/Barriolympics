@@ -1,19 +1,71 @@
-<RadzenCard Style="width: 500px; height: auto">
+@using BarriolympicsRadzen.Controllers
+@inject AuthenticationController auth
+@inject NavigationManager nav
+
+<RadzenCard @onkeypress=@(args => SearchInputKeyPressed(args)) Style="width: 500px; height: auto">
     
     <RadzenRow>
         <RadzenText Text="Admin Login" TextStyle="Radzen.Blazor.TextStyle.DisplayH5" />
     </RadzenRow>
     <RadzenRow>
         <RadzenFormField Text="Usuario" Style="width: 100%">
-            <RadzenTextBox></RadzenTextBox>
+            <RadzenTextBox Disabled=@(isLoginIn) @bind-Value=@username></RadzenTextBox>
         </RadzenFormField>
     </RadzenRow>
     <RadzenRow Style="margin-bottom: 20px; margin-top: 20px">
-        <RadzenFormField Text="Contraseña" Style="width: 100%">
-            <RadzenPassword></RadzenPassword>
+        <RadzenFormField  Text="Contraseña" Style="width: 100%">
+            <RadzenPassword Disabled=@(isLoginIn) @bind-Value=@password></RadzenPassword>
         </RadzenFormField>
     </RadzenRow>
     <RadzenRow>
-        <RadzenButton Style="width: 100%; max-width: 200PX; margin-left: AUTO; margin-right: AUTO" Text="Iniciar Sesión"></RadzenButton>
+        <RadzenButton IsBusy="@isLoginIn" Style="width: 100%; max-width: 200PX; margin-left: AUTO; margin-right: AUTO" Text="Iniciar Sesión"></RadzenButton>
     </RadzenRow>
 </RadzenCard>
+
+@code{
+
+    string username = "";
+    string password = "";
+    bool isLoginIn = false;
+
+
+
+    protected override Task OnInitializedAsync()
+    {
+        return base.OnInitializedAsync();
+    }
+
+    async Task SearchInputKeyPressed(KeyboardEventArgs args)
+    {
+        if(args.Key == "ENTER")
+        {
+            await Login();
+        }
+    }
+    async Task Login()
+    {
+        isLoginIn = true;
+        StateHasChanged();
+        var res = await auth.Login(username, password);
+        if(res != AuthenticationController.LoginResult.Success)
+        {
+            NotificationService.Notify(new()
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Error",
+                Detail = res == AuthenticationController.LoginResult.UserNotFound ? "Usuario no existe." : "Usuario logeado muchas veces en otros dispositivos.",
+                Duration = 3000,
+                CloseOnClick = true
+            });
+        }
+
+        isLoginIn = false;
+        StateHasChanged();
+        if(res == AuthenticationController.LoginResult.Success)
+        {
+
+            //DialogService.Close();
+            nav.NavigateTo("/admin");
+        }
+    }
+}

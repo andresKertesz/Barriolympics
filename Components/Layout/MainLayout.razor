@@ -1,7 +1,10 @@
+@using BarriolympicsRadzen.Components.Pages
 @using BarriolympicsRadzen.Controllers
+@using BarriolympicsRadzen.Data.Models
 @inherits LayoutComponentBase
 @inject CookieThemeService CookieThemeService
 @inject DatabaseController db
+@inject AuthenticationController auth
 @inject StyleController bs
 @inject NavigationManager navigationManager
 <RadzenComponents />
@@ -20,12 +23,21 @@
         <RadzenRow JustifyContent="JustifyContent.Start" AlignItems="AlignItems.Center" Gap="0" Style="width: 100%; height: 100%; background-color: rgba(63, 118, 255, 0)">
             <RadzenColumn Size="1" Style="height: 100%">
                 <RadzenRow Style="width: 60px; height: 60px">
-                    <RadzenImage Style="width: 100%; height: 100%" Path="images/logo.png" Click="LogoClick"></RadzenImage>
+                    <RadzenImage Style="width: 100%; height: 100%" Path="images/logo.png" Click="LogoClick" @ondblclick="LogoDoubleClick"></RadzenImage>
                 </RadzenRow>
             </RadzenColumn>
             <RadzenColumn Size="11">
                 <RadzenRow AlignItems="AlignItems.End" Style="width:100%;height:100%">
                     <RadzenMenu Style="background-color: transparent; color: #ffffff;margin-left:auto; margin-right:2%" ClickToOpen="false">
+
+                        @if (usuario != null)
+                        {
+                            
+                            <RadzenMenuItem Text="@usuario.Username" Icon="Person" Style="--rz-menu-top-item-color: white;">
+                                <RadzenMenuItem Icon="security" Text="Admin" Style="background" Path="/admin"></RadzenMenuItem>
+                                <RadzenMenuItem Icon="logout" Text="Admin" Style="background" Click="Logout"></RadzenMenuItem>
+                            </RadzenMenuItem>
+                        }
 
                         <RadzenMenuItem Text="Competencias" Icon="Trophy" Style="--rz-menu-top-item-color: white;">
                             @foreach (var comp in db.GetTipoEventos())
@@ -61,10 +73,23 @@
 </RadzenLayout>
 
 @code{
-    protected override Task OnInitializedAsync()
+    Usuario? usuario;
+
+    protected override async Task OnInitializedAsync()
     {
+        navigationManager.LocationChanged += SiteChanged;
         bs.OnStyleChanged += StateHasChanged;
-        return base.OnInitializedAsync();
+        await base.OnInitializedAsync();
+    }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        usuario = await auth.GetLoggedInUser();
+
+        await base.OnAfterRenderAsync(firstRender);
+    }
+    async void SiteChanged(object? sender,LocationChangedEventArgs lc)
+    {
+        usuario = await auth.GetLoggedInUser();
     }
 
     public void Dispose()
@@ -81,4 +106,23 @@
         StateHasChanged();
     }
 
+    async Task Logout()
+    {
+        await auth.Logout();
+        usuario = await auth.GetLoggedInUser();
+    }
+
+    async Task LogoDoubleClick()
+    {
+        DialogService.Open<AdminLogin>("Login", new(), new()
+        {
+                Resizable = true,
+                Draggable = true,
+                Width = "700px",
+                Height ="512px",
+                Left = null,
+                Top = null
+        });
+
+    }
 }
