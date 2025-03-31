@@ -1,0 +1,65 @@
+@page "/admin"
+@using BarriolympicsRadzen.Data
+@using BarriolympicsRadzen.Data.Models
+@using Microsoft.EntityFrameworkCore
+@inject ApplicationDbContext context
+<h1>Admin</h1>
+
+<RadzenTabs>
+    <Tabs>
+        <RadzenTabsItem Text="Game Types">
+            <CRUD TEntity="TipoJuego" 
+                    Title="Game Types"
+                  DbSetSelector="@((ApplicationDbContext context)=> context.TipoJuegos)" />
+        </RadzenTabsItem>
+        
+        <RadzenTabsItem Text="Games">
+            <CRUD TEntity="Juego" 
+                    Title="Games"
+                    DbSetSelector="@((ApplicationDbContext context)=> context.Juegos)" />
+        </RadzenTabsItem>
+        
+        <RadzenTabsItem Text="Game Images">
+            <CRUD TEntity="ImagenesJuego" 
+                    Title="Game Images"
+                    DbSetSelector="@((ApplicationDbContext context)=> context.ImagenesJuegos)" />
+        </RadzenTabsItem>
+        @* 
+
+        <RadzenTabsItem Text="Competence Types">
+            <CRUD TEntity="TipoCompetencia" 
+                    Title="Competence Types"
+                    DbSetSelector="@((ApplicationDbContext context)=> context.TipoCompetencia)" />
+        </RadzenTabsItem>
+        *@
+        
+        <RadzenTabsItem Text="Competences">
+            <CRUD TEntity="Competencium" 
+                    Title="Competences"
+                    DbSetSelector="@((ApplicationDbContext context)=> context.Competencia)" />
+        </RadzenTabsItem>
+        
+        <RadzenTabsItem Text="Bartenders">
+            <CRUD TEntity="Barriero" 
+                    Title="Bartenders"
+                    DbSetSelector="@((ApplicationDbContext context)=> context.Barrieros)"
+                    ExcludeProperties="@(new[] { "Copas" })" />
+        </RadzenTabsItem>
+        
+        <RadzenTabsItem Text="Cups">
+            <CRUD TEntity="Copa" 
+                    Title="Cups"
+                    DbSetSelector="@((ApplicationDbContext context)=> context.Copas)" />
+        </RadzenTabsItem>
+        
+        <RadzenTabsItem Text="Cup Types">
+            <CRUD TEntity="TipoCopa" 
+                    Title="Cup Types"
+                    DbSetSelector="@((ApplicationDbContext context)=> context.TipoCopas)" />
+        </RadzenTabsItem>
+        @*
+        <RadzenTabsItem Text="Events">
+            <CRUD TEntity="Evento" 
+        </RadzenTabsItem>*@
+    </Tabs>
+</RadzenTabs>

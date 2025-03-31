@@ -1,0 +1,386 @@
+﻿@typeparam TEntity where TEntity : class, new()
+@using System.Reflection
+@using System.ComponentModel.DataAnnotations
+@using System.ComponentModel.DataAnnotations.Schema
+@using System.Linq.Expressions
+@using BarriolympicsRadzen.Data
+@using Microsoft.EntityFrameworkCore
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject DialogService DialogService
+@inject NotificationService NotificationService
+
+<RadzenTemplateForm TItem="TEntity" Data="@Entity" Submit="@HandleSubmit">
+    <div class="container">
+        <div class="row">
+            @foreach (var property in EditableProperties)
+            {
+                <div class="col-md-6 mb-3">
+                    <RadzenLabel Text="@GetDisplayName(property)" Component="@property.Name" />
+                    @RenderPropertyEditor(property)
+                </div>
+            }
+        </div>
+
+        <div class="row mt-3">
+            <div class="col">
+                <RadzenButton ButtonType="ButtonType.Submit" Text="Save" ButtonStyle="ButtonStyle.Primary" />
+                <RadzenButton Text="Cancel" ButtonStyle="ButtonStyle.Light" Click="@Cancel" Class="ml-2" />
+            </div>
+        </div>
+    </div>
+</RadzenTemplateForm>
+
+@code {
+    private List<PropertyInfo> allProperties;
+    private List<PropertyInfo> editableProperties;
+    private PropertyInfo keyProperty;
+    private Dictionary<string, object> relationshipOptions = new Dictionary<string, object>();
+
+    [Parameter]
+    public TEntity Entity { get; set; }
+
+    [Parameter]
+    public Expression<Func<ApplicationDbContext, DbSet<TEntity>>> DbSetSelector { get; set; }
+
+    [Parameter]
+    public string[] ExcludeProperties { get; set; } = Array.Empty<string>();
+
+    [Parameter]
+    public string[] ReadOnlyProperties { get; set; } = Array.Empty<string>();
+
+    private List<PropertyInfo> EditableProperties => editableProperties ??= GetEditableProperties();
+
+    protected override async Task OnInitializedAsync()
+    {
+        allProperties = typeof(TEntity).GetProperties().ToList();
+        keyProperty = allProperties.FirstOrDefault(p => p.GetCustomAttribute<KeyAttribute>() != null);
+
+        // Load options for relationship properties
+        await LoadRelationshipOptions();
+    }
+
+    private async Task LoadRelationshipOptions()
+    {
+        await using var context = await DbFactory.CreateDbContextAsync();
+
+        foreach (var property in GetForeignKeyProperties())
+        {
+            var relationshipType = GetRelationshipType(property);
+            if (relationshipType != null)
+            {
+                // Find the DbSet method for this entity type
+                var dbSetMethod = typeof(ApplicationDbContext)
+                    .GetProperties()
+                    .FirstOrDefault(p => p.PropertyType.IsGenericType &&
+                                       p.PropertyType.GetGenericTypeDefinition() == typeof(DbSet<>) &&
+                                       p.PropertyType.GetGenericArguments()[0] == relationshipType);
+
+                if (dbSetMethod != null)
+                {
+                    // Get the DbSet
+                    var dbSet = dbSetMethod.GetValue(context);
+
+                    // Use reflection to call ToList
+                    var toListMethod = dbSetMethod.PropertyType.GetMethod("ToListAsync");
+                    var task = toListMethod.Invoke(dbSet, null);
+                    var getResultMethod = task.GetType().GetMethod("GetAwaiter")
+                        .ReturnType.GetMethod("GetResult");
+                    var options = getResultMethod.Invoke(task.GetType().GetMethod("GetAwaiter").Invoke(task, null), null);
+
+                    relationshipOptions[property.Name] = options;
+                }
+            }
+        }
+    }
+
+    private List<PropertyInfo> GetEditableProperties()
+    {
+        return allProperties
+            .Where(p => !p.GetCustomAttributes<NotMappedAttribute>().Any())
+            .Where(p => !ExcludeProperties.Contains(p.Name))
+            .Where(p => !ReadOnlyProperties.Contains(p.Name))
+            .Where(p => !IsComplexCollection(p))
+            .Where(p => p != keyProperty || keyProperty.GetValue(Entity) != null) // Exclude key property for new entities
+            .ToList();
+    }
+
+    private List<PropertyInfo> GetForeignKeyProperties()
+    {
+        return allProperties
+            .Where(p => p.Name.EndsWith("Id") && !p.GetCustomAttributes<NotMappedAttribute>().Any())
+            .Where(p => !ExcludeProperties.Contains(p.Name))
+            .ToList();
+    }
+
+    private Type GetRelationshipType(PropertyInfo fkProperty)
+    {
+        // Try to find the navigation property for this foreign key
+        var navigationPropName = fkProperty.Name.Substring(0, fkProperty.Name.Length - 2); // Remove "Id"
+        var navigationProp = allProperties.FirstOrDefault(p => p.Name == navigationPropName);
+
+        return navigationProp?.PropertyType;
+    }
+
+    private bool IsComplexCollection(PropertyInfo property)
+    {
+        return property.PropertyType.IsGenericType &&
+               property.PropertyType.GetGenericTypeDefinition() == typeof(ICollection<>) &&
+               property.PropertyType.GetGenericArguments()[0].IsClass &&
+               property.PropertyType.GetGenericArguments()[0] != typeof(string);
+    }
+
+    private string GetDisplayName(PropertyInfo property)
+    {
+        var displayAttr = property.GetCustomAttribute<DisplayAttribute>();
+        return displayAttr?.Name ?? SplitCamelCase(property.Name);
+    }
+
+    private RenderFragment RenderPropertyEditor(PropertyInfo property)
+    {
+        return builder =>
+        {
+            var propType = Nullable.GetUnderlyingType(property.PropertyType) ?? property.PropertyType;
+            var isRequired = property.GetCustomAttribute<RequiredAttribute>() != null;
+            var maxLength = property.GetCustomAttribute<StringLengthAttribute>()?.MaximumLength;
+            var isReadOnly = ReadOnlyProperties.Contains(property.Name) || property == keyProperty;
+
+            // If it's a foreign key property, create a dropdown
+            if (property.Name.EndsWith("Id") && relationshipOptions.ContainsKey(property.Name))
+            {
+                var relationType = GetRelationshipType(property);
+                var textProp = relationType.GetProperties().FirstOrDefault(p =>
+                    p.Name == "Name" || p.Name == "Title" || p.Name == "Nombre");
+
+                if (textProp != null)
+                {
+                    builder.OpenComponent<RadzenDropDown<object>>(0);
+                    builder.AddAttribute(1, "Data", relationshipOptions[property.Name]);
+                    builder.AddAttribute(2, "TextProperty", textProp.Name);
+                    builder.AddAttribute(3, "ValueProperty", "Id");
+                    builder.AddAttribute(4, "Name", property.Name);
+                    builder.AddAttribute(5, "Class", "w-100");
+                    builder.AddAttribute(6, "Disabled", isReadOnly);
+
+                    // Create two-way binding
+                    builder.AddAttribute(7, "Value", property.GetValue(Entity));
+                    builder.AddAttribute(8, "ValueChanged", EventCallback.Factory.Create<object>(this,
+                        value => property.SetValue(Entity, value)));
+
+                    builder.CloseComponent();
+
+                    if (isRequired)
+                    {
+                        builder.OpenComponent<RadzenRequiredValidator>(9);
+                        builder.AddAttribute(10, "Component", property.Name);
+                        builder.AddAttribute(11, "Text", "Required");
+                        builder.CloseComponent();
+                    }
+
+                    return;
+                }
+            }
+
+            // Handle various property types
+            if (propType == typeof(string))
+            {
+                if (maxLength.HasValue && maxLength.Value > 255)
+                {
+                    builder.OpenComponent<RadzenTextArea>(0);
+                    builder.AddAttribute(1, "Name", property.Name);
+                    builder.AddAttribute(2, "Class", "w-100");
+                    builder.AddAttribute(3, "Disabled", isReadOnly);
+
+                    // Create two-way binding
+                    builder.AddAttribute(4, "Value", property.GetValue(Entity)?.ToString());
+                    builder.AddAttribute(5, "ValueChanged", EventCallback.Factory.Create<string>(this,
+                        value => property.SetValue(Entity, value)));
+
+                    builder.CloseComponent();
+                }
+                else
+                {
+                    builder.OpenComponent<RadzenTextBox>(0);
+                    builder.AddAttribute(1, "Name", property.Name);
+                    builder.AddAttribute(2, "Class", "w-100");
+                    builder.AddAttribute(3, "Disabled", isReadOnly);
+
+                    // Create two-way binding
+                    builder.AddAttribute(4, "Value", property.GetValue(Entity)?.ToString());
+                    builder.AddAttribute(5, "ValueChanged", EventCallback.Factory.Create<string>(this,
+                        value => property.SetValue(Entity, value)));
+
+                    builder.CloseComponent();
+                }
+
+                if (isRequired)
+                {
+                    builder.OpenComponent<RadzenRequiredValidator>(6);
+                    builder.AddAttribute(7, "Component", property.Name);
+                    builder.AddAttribute(8, "Text", "Required");
+                    builder.CloseComponent();
+                }
+            }
+            else if (propType == typeof(bool))
+            {
+                builder.OpenComponent<RadzenCheckBox<bool>>(0);
+                builder.AddAttribute(1, "Name", property.Name);
+                builder.AddAttribute(2, "Disabled", isReadOnly);
+
+                // Create two-way binding
+                builder.AddAttribute(3, "Value", (bool?)property.GetValue(Entity) ?? false);
+                builder.AddAttribute(4, "ValueChanged", EventCallback.Factory.Create<bool>(this,
+                    value => property.SetValue(Entity, value)));
+
+                builder.CloseComponent();
+            }
+            else if (propType == typeof(int) || propType == typeof(long) || propType == typeof(short))
+            {
+                builder.OpenComponent<RadzenNumeric<int>>(0);
+                builder.AddAttribute(1, "Name", property.Name);
+                builder.AddAttribute(2, "Class", "w-100");
+                builder.AddAttribute(3, "Disabled", isReadOnly);
+
+                // Create two-way binding
+                builder.AddAttribute(4, "Value", (int?)property.GetValue(Entity));
+                builder.AddAttribute(5, "ValueChanged", EventCallback.Factory.Create<int?>(this,
+                    value => property.SetValue(Entity, value)));
+
+                builder.CloseComponent();
+
+                if (isRequired)
+                {
+                    builder.OpenComponent<RadzenRequiredValidator>(6);
+                    builder.AddAttribute(7, "Component", property.Name);
+                    builder.AddAttribute(8, "Text", "Required");
+                    builder.CloseComponent();
+                }
+            }
+            else if (propType == typeof(decimal) || propType == typeof(double) || propType == typeof(float))
+            {
+                builder.OpenComponent<RadzenNumeric<decimal>>(0);
+                builder.AddAttribute(1, "Name", property.Name);
+                builder.AddAttribute(2, "Class", "w-100");
+                builder.AddAttribute(3, "Disabled", isReadOnly);
+
+                // Create two-way binding
+                builder.AddAttribute(4, "Value", Convert.ToDecimal(property.GetValue(Entity) ?? 0));
+                builder.AddAttribute(5, "ValueChanged", EventCallback.Factory.Create<decimal>(this,
+                    value => property.SetValue(Entity, Convert.ChangeType(value, propType))));
+
+                builder.CloseComponent();
+
+                if (isRequired)
+                {
+                    builder.OpenComponent<RadzenRequiredValidator>(6);
+                    builder.AddAttribute(7, "Component", property.Name);
+                    builder.AddAttribute(8, "Text", "Required");
+                    builder.CloseComponent();
+                }
+            }
+            else if (propType == typeof(DateTime))
+            {
+                builder.OpenComponent<RadzenDatePicker<DateTime>>(0);
+                builder.AddAttribute(1, "Name", property.Name);
+                builder.AddAttribute(2, "Class", "w-100");
+                builder.AddAttribute(3, "DateFormat", "d");
+                builder.AddAttribute(4, "Disabled", isReadOnly);
+
+                // Create two-way binding
+                builder.AddAttribute(5, "Value", (DateTime?)property.GetValue(Entity) ?? DateTime.Now);
+                builder.AddAttribute(6, "ValueChanged", EventCallback.Factory.Create<DateTime?>(this,
+                    value => property.SetValue(Entity, value)));
+
+                builder.CloseComponent();
+
+                if (isRequired)
+                {
+                    builder.OpenComponent<RadzenRequiredValidator>(7);
+                    builder.AddAttribute(8, "Component", property.Name);
+                    builder.AddAttribute(9, "Text", "Required");
+                    builder.CloseComponent();
+                }
+            }
+            else if (propType.IsEnum)
+            {
+                builder.OpenComponent<RadzenDropDown<object>>(0);
+                builder.AddAttribute(1, "Data", Enum.GetValues(propType));
+                builder.AddAttribute(2, "Name", property.Name);
+                builder.AddAttribute(3, "Class", "w-100");
+                builder.AddAttribute(4, "Disabled", isReadOnly);
+
+                // Create two-way binding
+                builder.AddAttribute(5, "Value", property.GetValue(Entity));
+                builder.AddAttribute(6, "ValueChanged", EventCallback.Factory.Create<object>(this,
+                    value => property.SetValue(Entity, value)));
+
+                builder.CloseComponent();
+
+                if (isRequired)
+                {
+                    builder.OpenComponent<RadzenRequiredValidator>(7);
+                    builder.AddAttribute(8, "Component", property.Name);
+                    builder.AddAttribute(9, "Text", "Required");
+                    builder.CloseComponent();
+                }
+            }
+            else
+            {
+                // For unsupported types, show a disabled textbox
+                builder.OpenComponent<RadzenTextBox>(0);
+                builder.AddAttribute(1, "Name", property.Name);
+                builder.AddAttribute(2, "Value", "[Complex Type]");
+                builder.AddAttribute(3, "Disabled", true);
+                builder.AddAttribute(4, "Class", "w-100");
+                builder.CloseComponent();
+            }
+        };
+    }
+
+    private async Task HandleSubmit()
+    {
+        await using var context = await DbFactory.CreateDbContextAsync();
+        var dbSet = DbSetSelector.Compile()(context);
+
+        var isNew = keyProperty != null && keyProperty.GetValue(Entity) == null;
+
+        if (isNew)
+        {
+            dbSet.Add(Entity);
+        }
+        else
+        {
+            context.Entry(Entity).State = EntityState.Modified;
+        }
+
+        await context.SaveChangesAsync();
+
+        NotificationService.Notify(NotificationSeverity.Success, "Success",
+            $"{typeof(TEntity).Name} was {(isNew ? "created" : "updated")} successfully.");
+
+        DialogService.Close(Entity);
+    }
+
+    private void Cancel()
+    {
+        DialogService.Close(null);
+    }
+
+    private string SplitCamelCase(string input)
+    {
+        if (string.IsNullOrEmpty(input)) return input;
+
+        var result = new System.Text.StringBuilder();
+        result.Append(input[0]);
+
+        for (var i = 1; i < input.Length; i++)
+        {
+            if (char.IsUpper(input[i]))
+            {
+                result.Append(' ');
+            }
+            result.Append(input[i]);
+        }
+
+        return result.ToString();
+    }
+}

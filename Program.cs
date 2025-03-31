@@ -6,12 +6,12 @@ using BarriolympicsRadzen.Controllers;
 using Blazored.LocalStorage;
 
 var builder = WebApplication.CreateBuilder(args);
-
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 // Add services to the container.
 builder.Services.AddRazorComponents()
       .AddInteractiveServerComponents().AddHubOptions(options => options.MaximumReceiveMessageSize = 10 * 1024 * 1024);
+builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
 builder.Services.AddScoped<DatabaseController>();
 builder.Services.AddScoped<StyleController>();
 builder.Services.AddBlazoredLocalStorage();

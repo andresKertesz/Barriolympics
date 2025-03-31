@@ -33,9 +33,9 @@
                         @if (usuario != null)
                         {
                             
-                            <RadzenMenuItem Text="@usuario.Username" Icon="Person" Style="--rz-menu-top-item-color: white;">
+                            <RadzenMenuItem Text="@usuario.Username" Icon="@usuario.Icon" Style="--rz-menu-top-item-color: white;">
                                 <RadzenMenuItem Icon="security" Text="Admin" Style="background" Path="/admin"></RadzenMenuItem>
-                                <RadzenMenuItem Icon="logout" Text="Admin" Style="background" Click="Logout"></RadzenMenuItem>
+                                <RadzenMenuItem Icon="logout" Text="Log Out" Style="background" Click="Logout"></RadzenMenuItem>
                             </RadzenMenuItem>
                         }
 
@@ -57,7 +57,6 @@
                                 <RadzenMenuItem Icon="@barrio.Icon"  Click="()=>BarrieroClicked(barrio.Alias)"  Text="@barrio.Alias" Style="background"></RadzenMenuItem>
                             }
                         </RadzenMenuItem>
-
                     </RadzenMenu>
                 </RadzenRow>
             </RadzenColumn>
@@ -77,19 +76,17 @@
 
     protected override async Task OnInitializedAsync()
     {
-        navigationManager.LocationChanged += SiteChanged;
         bs.OnStyleChanged += StateHasChanged;
         await base.OnInitializedAsync();
     }
     protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        usuario = await auth.GetLoggedInUser();
+    {   
+        if(firstRender){
+            usuario = await auth.GetLoggedInUser();
+            StateHasChanged();
+        }
 
         await base.OnAfterRenderAsync(firstRender);
-    }
-    async void SiteChanged(object? sender,LocationChangedEventArgs lc)
-    {
-        usuario = await auth.GetLoggedInUser();
     }
 
     public void Dispose()
@@ -110,19 +107,26 @@
     {
         await auth.Logout();
         usuario = await auth.GetLoggedInUser();
+
     }
 
     async Task LogoDoubleClick()
     {
+        if(usuario != null)
+        {
+            return;
+        }
+        await Task.Delay(100); // Small delay to avoid immediate re-render issues
+        
         DialogService.Open<AdminLogin>("Login", new(), new()
         {
                 Resizable = true,
                 Draggable = true,
-                Width = "700px",
-                Height ="512px",
+                Width = "300px",
+                Height ="200px",
                 Left = null,
                 Top = null
         });
-
+        usuario = await auth.GetLoggedInUser();
     }
 }

@@ -52,10 +52,10 @@ namespace BarriolympicsRadzen.Controllers
                  UsuarioId = usuario.Id
             };
             //aca el user esta fullcockman
+            await _localStorage.SetItemAsStringAsync(TOKEN_KEY, token.Token.ToString());
             await _applicationDbContext.TokenLogins.AddAsync(token);
             await _applicationDbContext.SaveChangesAsync();
 
-            await _localStorage.SetItemAsStringAsync(TOKEN_KEY, token.Token.ToString());
             return LoginResult.Success;
         }
         public async Task Logout()
@@ -64,8 +64,26 @@ namespace BarriolympicsRadzen.Controllers
             {
                 return;
             }
+            bool tokenExists = await _localStorage.ContainKeyAsync(TOKEN_KEY);
 
+            //disable update key
+            if (!tokenExists)
+            {
+                return;
+            }
+
+            var lsToken = await _localStorage.GetItemAsStringAsync(TOKEN_KEY);
+            var token = _applicationDbContext.TokenLogins.Where(x=>x.Habilitado && x.Token.ToString() == lsToken).FirstOrDefault ();
+            
+            if (token != null)
+            {
+                token.Habilitado = false;
+                _applicationDbContext.Update(token);
+                await _applicationDbContext.SaveChangesAsync();
+            }
             await _localStorage.RemoveItemAsync(TOKEN_KEY);
+
+            
         }
 
 
@@ -78,13 +96,14 @@ namespace BarriolympicsRadzen.Controllers
             }
 
             string token = await _localStorage.GetItemAsStringAsync(TOKEN_KEY);
-            var tokenFound = _applicationDbContext.TokenLogins.Where(x => x.Token.Equals(token)).FirstOrDefault();
-            if (tokenFound.ValidoDesde > DateTime.Now || tokenFound.ValidoHasta < DateTime.Now)
+            var tokenFound = _applicationDbContext.TokenLogins.Where(x => x.Token.ToString().Equals(token)).FirstOrDefault();
+
+            if (tokenFound == null && (tokenFound.ValidoDesde > DateTime.Now || tokenFound.ValidoHasta < DateTime.Now))
             {
                 await _localStorage.RemoveItemAsync(TOKEN_KEY);
                 return null;
             }
-            return tokenFound?.Usuario;
+            return _applicationDbContext.Usuarios.Where(x=>x.Id == tokenFound.UsuarioId).FirstOrDefault();
         }
 
 
