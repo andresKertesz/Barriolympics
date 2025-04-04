@@ -1,0 +1,130 @@
+@using BarriolympicsRadzen.Data
+@using BarriolympicsRadzen.Data.Models
+@using BarriolympicsRadzen.Controllers
+
+@inject AuthenticationController auth
+@inject DatabaseController db
+@inject ApplicationDbContext dbContext
+@inject NavigationManager nav
+@inject DialogService dialog
+@inject NotificationService notif
+
+<h3>Eventos</h3>
+
+<RadzenStack Orientation="Radzen.Orientation.Vertical">
+    <RadzenRow Style="width:100%">
+        <RadzenButton Style="width: 100px" ButtonStyle="Radzen.ButtonStyle.Success" Text="Nuevo" Click="Add" Icon="add_circle" />
+    </RadzenRow>
+
+    <RadzenDataGrid TItem="Evento" Data="eventos">
+        <Columns>
+            <RadzenDataGridColumn Title="Acciones" Width="150px">
+                <Template Context="element">
+                    <RadzenButton Icon="edit" Click="@(() => Edit(element))" ButtonStyle="Radzen.ButtonStyle.Primary" />
+                    <RadzenButton Icon="delete" Click="@(() => Delete(element))" ButtonStyle="Radzen.ButtonStyle.Danger" />
+                </Template>
+            </RadzenDataGridColumn>
+
+            <RadzenDataGridColumn Property="Nombre" Title="Nombre" />
+            <RadzenDataGridColumn Property="Fecha" Title="Fecha" />
+            <RadzenDataGridColumn Title="Juego">
+                <Template Context="element">
+                    <RadzenLabel Text="@GetJuegoNombre(element.JuegoId)" />
+                </Template>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn Title="Competencia">
+                <Template Context="element">
+                    <RadzenLabel Text="@GetCompetenciaNombre(element.CompetenciaId)" />
+                </Template>
+            </RadzenDataGridColumn>
+        </Columns>
+    </RadzenDataGrid>
+</RadzenStack>
+
+@code {
+    private List<Evento> eventos;
+
+    protected override Task OnInitializedAsync()
+    {
+        if (auth.GetLoggedInUser() == null)
+            nav.NavigateTo("/");
+
+        eventos = dbContext.Eventos.ToList();
+        return base.OnInitializedAsync();
+    }
+
+    private string GetJuegoNombre(Guid? id)
+    {
+        return dbContext.Juegos.FirstOrDefault(x => x.Id == id)?.Nombre ?? "Sin juego";
+    }
+
+    private string GetCompetenciaNombre(Guid? id)
+    {
+        return dbContext.Competencia.FirstOrDefault(x => x.Id == id)?.Nombre ?? "Sin competencia";
+    }
+
+    protected async Task Add()
+    {
+        await LaunchDialog();
+    }
+
+    protected async Task Edit(Evento evento)
+    {
+        await LaunchDialog(evento);
+    }
+
+    private async Task LaunchDialog(Evento? evento = null)
+    {
+        await dialog.OpenAsync<EventoAddEdit>(evento == null ? "Crear" : $"Editar {evento.Nombre}", new()
+        {
+            { "EditMode", evento != null },
+            { "EditObject", evento }
+        },
+        new()
+            {
+                Width = "400px",
+                Height = "auto",
+                Resizable = false
+            });
+
+        eventos = dbContext.Eventos.ToList();
+    }
+
+    protected async Task Delete(Evento evento)
+    {
+        var confirmed = await dialog.Confirm($"¿Borrar {evento.Nombre}?", "Eliminar", new ConfirmOptions
+            {
+                OkButtonText = "Sí",
+                CancelButtonText = "No"
+            });
+
+        if (confirmed == true)
+        {
+            try
+            {
+                dbContext.Eventos.Remove(evento);
+                await dbContext.SaveChangesAsync();
+
+                notif.Notify(new()
+                    {
+                        CloseOnClick = true,
+                        Severity = NotificationSeverity.Success,
+                        Summary = "Éxito",
+                        Detail = "Evento eliminado correctamente"
+                    });
+
+                eventos = dbContext.Eventos.ToList();
+            }
+            catch (Exception ex)
+            {
+                notif.Notify(new()
+                    {
+                        CloseOnClick = true,
+                        Severity = NotificationSeverity.Error,
+                        Summary = "Error",
+                        Detail = ex.ToString()
+                    });
+            }
+        }
+    }
+}

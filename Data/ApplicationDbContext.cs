@@ -136,6 +136,11 @@ public partial class ApplicationDbContext : DbContext
             entity.ToTable("Evento");
 
             entity.Property(e => e.Id).ValueGeneratedNever();
+            entity.Property(e => e.Nombre)
+                .IsRequired()
+                .HasMaxLength(500)
+                .IsUnicode(false)
+                .HasDefaultValue("Event");
 
             entity.HasOne(d => d.Competencia).WithMany(p => p.Eventos)
                 .HasForeignKey(d => d.CompetenciaId)

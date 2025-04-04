@@ -1,0 +1,93 @@
+@using BarriolympicsRadzen.Data
+@using BarriolympicsRadzen.Data.Models
+@inject ApplicationDbContext db
+@inject DialogService dialog
+@inject NotificationService notif
+
+<RadzenRow Style="width:100%;height:auto">
+
+    <RadzenRow Style="width:100%">
+        <RadzenLabel Style="margin-top:auto;margin-bottom:auto;" Text="Nombre"></RadzenLabel>
+        <RadzenTextBox Style="width:200px" @bind-Value="@EditObject.Nombre"></RadzenTextBox>
+    </RadzenRow>
+    <RadzenRow Style="width:100%">
+        <RadzenLabel Style="margin-top:auto;margin-bottom:auto;" Text="Imagen"></RadzenLabel>
+        <RadzenTextBox Style="width:200px" @bind-Value="@EditObject.Imagen"></RadzenTextBox>
+    </RadzenRow>
+    <RadzenRow Style="width:100%">
+        <RadzenLabel Style="margin-top:auto;margin-bottom:auto;" Text="Fecha"></RadzenLabel>
+        <RadzenDatePicker TValue="DateOnly" Style="width:200px" @bind-Value="@EditObject.Fecha"></RadzenDatePicker>
+    </RadzenRow>
+    <RadzenRow Style="width:100%">
+        <RadzenLabel Style="margin-top:auto;margin-bottom:auto;" Text="Fecha"></RadzenLabel>
+        <RadzenDropDown Data="db.TipoCompetencia.ToList()" Style="width:200px" TextProperty="Nombre" ValueProperty="Id" @bind-Value="@EditObject.Tipo"></RadzenDropDown>
+    </RadzenRow>
+
+    <RadzenRow Style="width:100%">
+        <RadzenButton Text="Aceptar" Icon="Save" Click=Accept ButtonStyle="ButtonStyle.Primary"></RadzenButton>
+
+        <RadzenButton Text="Cancelar" Icon="Cancel" ButtonStyle="ButtonStyle.Danger"></RadzenButton>
+
+    </RadzenRow>
+
+</RadzenRow>
+
+
+@code {
+    [Parameter]
+    public bool EditMode { get; set; } = false;
+    [Parameter]
+    public Competencium EditObject {get; set;}
+
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if(EditMode && EditObject == null)
+        {
+            throw new ArgumentException("Editmode necesita tener el objeto a editar...");
+        }
+        if(EditObject == null)
+        {
+            EditObject = new()
+            {
+                Id = Guid.NewGuid()
+            };
+        }
+
+    }
+
+    private async Task Accept(MouseEventArgs args)
+    {
+        try{
+            if (EditMode)
+            {
+                db.Competencia.Update(EditObject);
+            }
+            else
+            {
+                db.Competencia.Add(EditObject);
+            }
+
+            await db.SaveChangesAsync();
+            notif.Notify(new()
+            {
+                CloseOnClick = true,
+                Summary = "Exito",
+                Detail = "Cambios guardados correctamente."
+            });
+            dialog.Close();
+        }
+        catch (Exception ex)
+        {
+
+            notif.Notify(new()
+                {
+                    CloseOnClick = true,
+                    Severity = NotificationSeverity.Error,
+                    Summary = "Error",
+                    Detail = ex.ToString()
+                });
+        }
+        }
+    }
+}

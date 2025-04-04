@@ -1,0 +1,123 @@
+@using BarriolympicsRadzen.Data
+@using BarriolympicsRadzen.Data.Models
+@using BarriolympicsRadzen.Controllers
+
+@inject AuthenticationController auth
+@inject BarriolympicsRadzen.Controllers.DatabaseController db
+@inject ApplicationDbContext dbContext
+@inject NavigationManager nav
+@inject DialogService dialog
+@inject NotificationService notif
+
+<h3>Juegos</h3>
+
+<RadzenStack Orientation="Radzen.Orientation.Vertical">
+    <RadzenRow Style="width:100%">
+        <RadzenButton Style="width: 100px" ButtonStyle="Radzen.ButtonStyle.Success" Text="Nuevo" Click="Add" Icon="add_circle" />
+    </RadzenRow>
+
+    <RadzenDataGrid TItem="Juego" Data="juegos">
+        <Columns>
+            <RadzenDataGridColumn Title="Acciones" Width="150px">
+                <Template Context="element">
+                    <RadzenButton Icon="edit" Click="@(() => Edit(element))" ButtonStyle="Radzen.ButtonStyle.Primary" />
+                    <RadzenButton Icon="delete" Click="@(() => Delete(element))" ButtonStyle="Radzen.ButtonStyle.Danger" />
+                </Template>
+            </RadzenDataGridColumn>
+
+            <RadzenDataGridColumn Property="Nombre" Title="Nombre" />
+            <RadzenDataGridColumn Property="Descripcion" Title="Descripción" />
+            <RadzenDataGridColumn Property="Link" Title="Link" />
+            <RadzenDataGridColumn Title="Tipo de Juego">
+                <Template Context="element">
+                    <RadzenLabel Text="@GetTipoNombre(element.Tipo)" />
+                </Template>
+            </RadzenDataGridColumn>
+        </Columns>
+    </RadzenDataGrid>
+</RadzenStack>
+
+@code {
+    private List<Juego> juegos;
+
+    protected override Task OnInitializedAsync()
+    {
+        if (auth.GetLoggedInUser() == null)
+        {
+            nav.NavigateTo("/");
+        }
+
+        juegos = dbContext.Juegos.ToList();
+        return base.OnInitializedAsync();
+    }
+
+    private string GetTipoNombre(Guid tipoId)
+    {
+        return dbContext.TipoJuegos.FirstOrDefault(x => x.Id == tipoId)?.Nombre ?? "Sin tipo";
+    }
+
+    protected async Task Add()
+    {
+        await LaunchDialog();
+    }
+
+    protected async Task Edit(Juego juego)
+    {
+        await LaunchDialog(juego);
+    }
+
+    private async Task LaunchDialog(Juego? juego = null)
+    {
+        await dialog.OpenAsync<JuegoAddEdit>(juego == null ? "Crear" : $"Editar {juego.Nombre}", new()
+        {
+            { "EditMode", juego != null },
+            { "EditObject", juego }
+        },
+        new()
+            {
+                Width = "400px",
+                Height = "auto",
+                Resizable = false
+            });
+
+        juegos = dbContext.Juegos.ToList();
+    }
+
+    protected async Task Delete(Juego juego)
+    {
+        var confirmed = await dialog.Confirm($"¿Borrar {juego.Nombre}?", "Eliminar", new ConfirmOptions
+            {
+                OkButtonText = "Sí",
+                CancelButtonText = "No"
+            });
+
+        if (confirmed == true)
+        {
+            try
+            {
+                dbContext.Juegos.Remove(juego);
+                await dbContext.SaveChangesAsync();
+
+                notif.Notify(new NotificationMessage
+                    {
+                        CloseOnClick = true,
+                        Severity = NotificationSeverity.Success,
+                        Summary = "Éxito",
+                        Detail = "Juego eliminado correctamente"
+                    });
+
+                juegos = dbContext.Juegos.ToList();
+            }
+            catch (Exception ex)
+            {
+                notif.Notify(new NotificationMessage
+                    {
+                        CloseOnClick = true,
+                        Severity = NotificationSeverity.Error,
+                        Summary = "Error",
+                        Detail = ex.ToString()
+                    });
+            }
+        }
+    }
+}

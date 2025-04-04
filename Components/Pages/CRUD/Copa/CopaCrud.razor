@@ -1,0 +1,141 @@
+@using BarriolympicsRadzen.Data
+@using BarriolympicsRadzen.Data.Models
+@using BarriolympicsRadzen.Controllers
+
+
+@inject AuthenticationController auth
+@inject BarriolympicsRadzen.Controllers.DatabaseController db
+@inject ApplicationDbContext dbContext
+@inject NavigationManager nav
+@inject DialogService dialog
+@inject NotificationService notif
+
+
+<h3>Copa</h3>
+<RadzenStack Orientation="Radzen.Orientation.Vertical">
+    <RadzenRow Style="width:100%">
+        <RadzenButton Style="width: 100px" ButtonStyle="Radzen.ButtonStyle.Success" Text="Nuevo" Click="Add" Icon="add_circle"></RadzenButton>
+    </RadzenRow>
+    <RadzenDataGrid TItem="Copa" Data="copas">
+        <Columns>
+            <RadzenDataGridColumn Title="Editar" Width="100px">
+                <Template Context="element">
+                    <RadzenButton Icon="edit" Style="" Click="@(()=>Edit(element))" ButtonStyle="Radzen.ButtonStyle.Primary"></RadzenButton>
+                    <RadzenButton Icon="delete" Style="" Click="@(()=>Delete(element))" ButtonStyle="Radzen.ButtonStyle.Danger"></RadzenButton>
+                </Template>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn Property="Copa.Nombre" Title="Nombre"></RadzenDataGridColumn>
+
+            <RadzenDataGridColumn Title="Tipo" >
+                <Template Context="element">
+                    <RadzenLabel Text="@GetType(element.TipoId).Nombre"></RadzenLabel>
+
+                </Template>
+
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn Title="Evento">
+                <Template Context="element">
+                    <RadzenLabel Text="@GetEvento(element.EventoId)?.Nombre"></RadzenLabel>
+                </Template>   
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn Property="Copa.Barriero.Nombre" Title="Gaanador"></RadzenDataGridColumn>
+            <RadzenDataGridColumn Property="Copa.Aura" Title="Aura"></RadzenDataGridColumn>
+
+        </Columns>
+
+    </RadzenDataGrid>
+</RadzenStack>
+
+@code {
+    private List<Copa> copas;
+    private string nullObject = "Ningún registro";
+    protected override Task OnInitializedAsync()
+    {
+        if(auth.GetLoggedInUser() == null)
+        {
+            nav.NavigateTo("/");
+        }
+        copas = dbContext.Copas.ToList();
+        return base.OnInitializedAsync();
+
+    }
+    private string GetColorRowStyle(string color)
+    {
+
+        return $"width:32px;height:100%;background-color:{color}";
+    }
+    private Evento? GetEvento(Guid? guid)
+    {
+        return dbContext.Eventos.Where(x => x.Id == guid).FirstOrDefault();
+    }
+    private TipoCopa? GetType(Guid? guid)
+    {
+        return dbContext.TipoCopas.Where(x => x.Id == guid).FirstOrDefault();
+    }
+    protected async Task Add()
+    {
+        await LaunchDialog();
+    }
+
+    protected async Task Edit(Copa barriero)
+    {
+        await LaunchDialog(barriero);
+    }
+
+    private async Task LaunchDialog(Copa? copa = null)
+    {
+        
+        await dialog.OpenAsync<CopaAddEdit>(copa == null ? "Crear" :$"Editar {copa.Nombre}", new()
+        {
+            { "EditMode",copa != null},{ "EditObject",copa}
+        },
+        new()
+            {
+                Width = "400px",
+                Height = "auto",
+                Resizable = false
+            });
+        copas = dbContext.Copas.ToList();
+    }
+
+    protected async Task Delete(Copa copa)
+    {
+        var confirmed = await dialog.Confirm($"Borrar {copa.Nombre}?", "Eliminar", new ConfirmOptions()
+        {
+            OkButtonText = "Si",
+            CancelButtonText = "No"
+        });
+        try
+        {
+
+
+            if (confirmed.HasValue && confirmed.Value)
+            {
+                {
+                    dbContext.Remove(copa);
+                    await dbContext.SaveChangesAsync();
+                }
+            }
+            notif.Notify(new()
+                {
+                    CloseOnClick = true,
+                    Severity = NotificationSeverity.Error,
+                    Summary = "Exito",
+                    Detail = "Registro borrado correctamente"
+                });
+            copas = dbContext.Copas.ToList();
+
+        }
+        catch (Exception ex)
+        {
+            notif.Notify(new()
+                {
+                    CloseOnClick = true,
+                    Severity = NotificationSeverity.Error,
+                    Summary = "Error",
+                    Detail = ex.ToString()
+                });
+        }
+    }
+    
+}

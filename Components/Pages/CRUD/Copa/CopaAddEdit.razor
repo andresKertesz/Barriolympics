@@ -1,0 +1,117 @@
+@using BarriolympicsRadzen.Data
+@using BarriolympicsRadzen.Data.Models
+@using Microsoft.EntityFrameworkCore;
+
+@inject ApplicationDbContext db
+@inject DialogService dialog
+@inject NotificationService notif
+
+<RadzenRow Style="width:100%;height:auto">
+
+    <RadzenRow Style="width:100%">
+        <RadzenLabel Style="margin-top:auto;margin-bottom:auto;" Text="Nombre"></RadzenLabel>
+        <RadzenTextBox Style="width:200px" @bind-Value="@EditObject.Nombre"></RadzenTextBox>
+    </RadzenRow>
+    <RadzenRow Style="width:100%">
+        <RadzenLabel Style="margin-top:auto;margin-bottom:auto;" Text="Aura"></RadzenLabel>
+        <RadzenNumeric Style="width:200px" @bind-Value="@EditObject.Aura"></RadzenNumeric>
+    </RadzenRow>
+    <RadzenRow Style="width:100%">
+        <RadzenLabel Style="margin-top:auto;margin-bottom:auto;" Text="Fecha"></RadzenLabel>
+        <RadzenDatePicker TValue="DateOnly" Style="width:200px" @bind-Value="@EditObject.FechaGanada"></RadzenDatePicker>
+    </RadzenRow>
+    <RadzenRow Style="width:100%">
+        <RadzenLabel Style="margin-top:auto;margin-bottom:auto;" Text="Ganador"></RadzenLabel>
+        <RadzenDropDown Data="Barrieros" TextProperty="Alias" ValueProperty="Id" @bind-Value="@EditObject.BarrieroId"></RadzenDropDown>
+    </RadzenRow>
+    
+    <RadzenRow Style="width:100%">
+        <RadzenLabel Style="margin-top:auto;margin-bottom:auto;" Text="Tipo"></RadzenLabel>
+        <RadzenDropDown Data="TipoCopas" TextProperty="Nombre" ValueProperty="Id" @bind-Value="@EditObject.TipoId"></RadzenDropDown>
+    </RadzenRow>
+    
+    <RadzenRow Style="width:100%">
+        <RadzenLabel Style="margin-top:auto;margin-bottom:auto;" Text="Evento"></RadzenLabel>
+        <RadzenDropDown AllowClear=true Data="Eventos" TextProperty="Nombre" ValueProperty="Id" @bind-Value="@EditObject.EventoId"></RadzenDropDown>
+    </RadzenRow>
+    
+
+    <RadzenRow Style="width:100%">
+        <RadzenButton Text="Aceptar" Icon="Save" Click=Accept ButtonStyle="ButtonStyle.Primary"></RadzenButton>
+
+        <RadzenButton Text="Cancelar" Icon="Cancel" ButtonStyle="ButtonStyle.Danger"></RadzenButton>
+
+    </RadzenRow>
+
+</RadzenRow>
+
+
+@code {
+    [Parameter]
+    public bool EditMode { get; set; } = false;
+    [Parameter]
+    public Copa EditObject {get; set;}
+
+    private List<Barriero> Barrieros = new();
+    private List<TipoCopa> TipoCopas = new();
+    private List<Evento> Eventos = new();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if(EditMode && EditObject == null)
+        {
+            throw new ArgumentException("Editmode necesita tener el objeto a editar...");
+        }
+        if(EditObject == null)
+        {
+            EditObject = new()
+            {
+                Id = Guid.NewGuid()
+            };
+        }
+
+
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Barrieros = db.Barrieros.AsNoTracking().ToList();
+        TipoCopas = db.TipoCopas.AsNoTracking().ToList();
+        Eventos = db.Eventos.AsNoTracking().ToList();
+    }
+
+    private async Task Accept(MouseEventArgs args)
+    {
+        try{
+            if (EditMode)
+            {
+                db.Copas.Update(EditObject);
+            }
+            else
+            {
+                db.Copas.Add(EditObject);
+            }
+
+            await db.SaveChangesAsync();
+            notif.Notify(new()
+            {
+                CloseOnClick = true,
+                Summary = "Exito",
+                Detail = "Cambios guardados correctamente."
+            });
+            dialog.Close();
+        }
+        catch (Exception ex)
+        {
+
+            notif.Notify(new()
+                {
+                    CloseOnClick = true,
+                    Severity = NotificationSeverity.Error,
+                    Summary = "Error",
+                    Detail = ex.ToString()
+                });
+        }
+        }
+    }
+}

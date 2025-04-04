@@ -1,0 +1,131 @@
+
+@using BarriolympicsRadzen.Data.Models
+@using BarriolympicsRadzen.Controllers 
+
+@inject AuthenticationController auth
+@inject BarriolympicsRadzen.Controllers.DatabaseController db
+@inject NavigationManager nav
+@inject DialogService dialog
+@inject NotificationService notif
+
+
+<h3>Barriero</h3>
+<RadzenStack Orientation="Radzen.Orientation.Vertical">
+    <RadzenRow Style="width:100%">
+        <RadzenButton Style="width: 100px" ButtonStyle="Radzen.ButtonStyle.Success" Text="Nuevo" Click="Add" Icon="add_circle"></RadzenButton>
+    </RadzenRow>
+    <RadzenDataGrid TItem="Barriero" Data="_barrieros">
+        <Columns>
+            <RadzenDataGridColumn Title="Editar" Width="100px">
+                <Template Context="element">
+                    <RadzenButton Icon="edit" Style="" Click="@(()=>Edit(element))" ButtonStyle="Radzen.ButtonStyle.Primary"></RadzenButton>
+                    <RadzenButton Icon="delete" Style="" Click="@(()=>Delete(element))" ButtonStyle="Radzen.ButtonStyle.Danger"></RadzenButton>
+                </Template>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn Property="Barriero.Alias" Title="Alias">
+            </RadzenDataGridColumn>
+
+            <RadzenDataGridColumn Property="Barriero.FechaNacimiento" Title="Fecha nacimiento"></RadzenDataGridColumn>
+            <RadzenDataGridColumn Property="Barriero.FechaNacimiento" Title="Fecha ingreso"></RadzenDataGridColumn>
+            <RadzenDataGridColumn Property="Barriero.Color" Title="Color">
+                <Template Context="element">
+
+                    @{
+                        var colorCSS = GetColorRowStyle(element.Color);
+                    }
+                    <span style='color:@element.Color'>
+                        <RadzenLabel Text="@element.Color"></RadzenLabel>
+                    </span>
+
+                </Template>
+            </RadzenDataGridColumn>
+
+        </Columns>
+
+    </RadzenDataGrid>
+</RadzenStack>
+
+@code {
+    private List<Barriero> _barrieros;
+
+    protected override Task OnInitializedAsync()
+    {
+        if(auth.GetLoggedInUser() == null)
+        {
+            nav.NavigateTo("/");
+        }
+        _barrieros = db.GetBarrieros();
+        return base.OnInitializedAsync();
+
+    }
+    private string GetColorRowStyle(string color)
+    {
+
+        return $"width:32px;height:100%;background-color:{color}";
+    }
+
+    protected async Task Add()
+    {
+        await LaunchDialog();
+    }
+
+    protected async Task Edit(Barriero barriero)
+    {
+        await LaunchDialog(barriero);
+    }
+
+    private async Task LaunchDialog(Barriero? barriero = null)
+    {
+        await dialog.OpenAsync<BarrieroAddEdit>(barriero == null ? "Crear" :$"Editar {barriero.Alias}", new()
+        {
+            { "EditMode",barriero != null},{ "EditObject",barriero}
+        },
+        new()
+            {
+                Width = "400px",
+                Height = "auto",
+                Resizable = false
+            });
+        _barrieros = db.GetBarrieros();
+    }
+
+    protected async Task Delete(Barriero barriero)
+    {
+        var confirmed = await dialog.Confirm($"Borrar {barriero.Alias}?", "Eliminar", new ConfirmOptions()
+        {
+            OkButtonText = "Si",
+            CancelButtonText = "No"
+        });
+        try
+        {
+
+
+            if (confirmed.HasValue && confirmed.Value)
+            {
+                {
+                    await db.DeleteBarriero(barriero);
+                }
+            }
+            notif.Notify(new()
+                {
+                    CloseOnClick = true,
+                    Severity = NotificationSeverity.Error,
+                    Summary = "Exito",
+                    Detail = "Registro borrado correctamente"
+                });
+            _barrieros = db.GetBarrieros();
+
+        }
+        catch (Exception ex)
+        {
+            notif.Notify(new()
+                {
+                    CloseOnClick = true,
+                    Severity = NotificationSeverity.Error,
+                    Summary = "Error",
+                    Detail = ex.ToString()
+                });
+        }
+    }
+    
+}

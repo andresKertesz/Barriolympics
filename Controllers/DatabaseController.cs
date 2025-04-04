@@ -18,6 +18,12 @@ namespace BarriolympicsRadzen.Controllers
         {
             return _dbContext.Barrieros.ToList();
         }
+
+        public async Task DeleteBarriero(Barriero barriero)
+        {
+            _dbContext.Barrieros.Remove(barriero);
+            await _dbContext.SaveChangesAsync();
+        }
         public Barriero? GetBarriero(string DisplayName)
         {
 

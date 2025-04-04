@@ -1,0 +1,101 @@
+@using BarriolympicsRadzen.Data
+@using BarriolympicsRadzen.Data.Models
+@using Microsoft.EntityFrameworkCore
+@inject ApplicationDbContext db
+@inject DialogService dialog
+@inject NotificationService notif
+
+<RadzenRow Style="width:100%;height:auto">
+    <RadzenRow Style="width:100%">
+        <RadzenLabel Style="margin-top:auto;margin-bottom:auto;" Text="Nombre" />
+        <RadzenTextBox Style="width:200px" @bind-Value="@EditObject.Nombre" />
+    </RadzenRow>
+
+    <RadzenRow Style="width:100%">
+        <RadzenLabel Style="margin-top:auto;margin-bottom:auto;" Text="Fecha" />
+        <RadzenDatePicker TValue="DateOnly" Style="width:200px" @bind-Value="@EditObject.Fecha" />
+    </RadzenRow>
+
+    <RadzenRow Style="width:100%">
+        <RadzenLabel Style="margin-top:auto;margin-bottom:auto;" Text="Juego" />
+        <RadzenDropDown AllowClear="true" Data="Juegos" TextProperty="Nombre" ValueProperty="Id" @bind-Value="@EditObject.JuegoId" />
+    </RadzenRow>
+
+    <RadzenRow Style="width:100%">
+        <RadzenLabel Style="margin-top:auto;margin-bottom:auto;" Text="Competencia" />
+        <RadzenDropDown AllowClear="true" Data="Competencias" TextProperty="Nombre" ValueProperty="Id" @bind-Value="@EditObject.CompetenciaId" />
+    </RadzenRow>
+
+    <RadzenRow Style="width:100%">
+        <RadzenLabel Style="margin-top:auto;margin-bottom:auto;" Text="Evento Padre" />
+        <RadzenDropDown AllowClear="true" Data="Eventos" TextProperty="Nombre" ValueProperty="Id" @bind-Value="@EditObject.PadreId" />
+    </RadzenRow>
+
+    <RadzenRow Style="width:100%">
+        <RadzenButton Text="Aceptar" Icon="Save" Click=Accept ButtonStyle="ButtonStyle.Primary" />
+        <RadzenButton Text="Cancelar" Icon="Cancel" ButtonStyle="ButtonStyle.Danger" />
+    </RadzenRow>
+</RadzenRow>
+
+@code {
+    [Parameter] public bool EditMode { get; set; } = false;
+    [Parameter] public Evento EditObject { get; set; }
+
+    private List<Juego> Juegos = new();
+    private List<Competencium> Competencias = new();
+    private List<Evento> Eventos = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        Juegos = db.Juegos.AsNoTracking().ToList();
+        Competencias = db.Competencia.AsNoTracking().ToList();
+        Eventos = db.Eventos.AsNoTracking().ToList();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (EditMode && EditObject == null)
+            throw new ArgumentException("EditMode necesita tener el objeto a editar...");
+
+        if (EditObject == null)
+        {
+            EditObject = new()
+                {
+                    Id = Guid.NewGuid(),
+                    Fecha = DateOnly.FromDateTime(DateTime.Today)
+                };
+        }
+    }
+
+    private async Task Accept(MouseEventArgs args)
+    {
+        try
+        {
+            if (EditMode)
+                db.Eventos.Update(EditObject);
+            else
+                db.Eventos.Add(EditObject);
+
+            await db.SaveChangesAsync();
+
+            notif.Notify(new()
+                {
+                    CloseOnClick = true,
+                    Summary = "Éxito",
+                    Detail = "Cambios guardados correctamente."
+                });
+
+            dialog.Close();
+        }
+        catch (Exception ex)
+        {
+            notif.Notify(new()
+                {
+                    CloseOnClick = true,
+                    Severity = NotificationSeverity.Error,
+                    Summary = "Error",
+                    Detail = ex.ToString()
+                });
+        }
+    }
+}

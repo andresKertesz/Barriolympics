@@ -1,0 +1,132 @@
+﻿@page "/barriero"
+@using BarriolympicsRadzen.Controllers
+@using BarriolympicsRadzen.Data
+@using BarriolympicsRadzen.Data.Models
+@inject ApplicationDbContext db
+@inject DatabaseController dbc
+
+<h2 class="title">🏆 Leaderboard Barriera</h2>
+
+<RadzenCard Style="max-width: 900px; margin: auto; padding: 1.5rem;">
+    <RadzenDataList TItem="LeaderEntry" Data="@leaderboard" Style="width: 100%;" WrapItems="false">
+        <Template Context="entry">
+            <a href=@($"/barriero/{entry.Alias}") style="text-decoration: none; color: inherit;">
+                <RadzenCard class="leader-card" Style=@($"margin-bottom: 15px; padding: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); border-left: 8px solid {entry.Color}; transition: transform 0.2s;")>
+                    <RadzenRow Style="align-items: center;">
+                        <RadzenColumn Size="2" Style="text-align:center;">
+                            <img src="@entry.Imagen" style="width: 70px; height: 70px; border-radius: 50%; border: 3px solid @entry.Color; object-fit: contain;" />
+                            <div style="margin-top: 5px;">
+                                <RadzenBadge Text=@($"#{entry.Position}") Style="font-size: 1rem;" Color="Color.Secondary" />
+                            </div>
+                        </RadzenColumn>
+
+                        <RadzenColumn Size="10">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <h3 style="margin: 0; display: flex; align-items: center;">
+                                        @entry.DisplayName
+                                        @for (int i = 0; i < entry.BarriosGanadas; i++)
+                                        {
+                                            <RadzenImage src="images/estrella.png" style="width: 18px; height: 18px; margin-left: 4px;" alt="Estrella" />
+                                        }
+                                    </h3>
+                                    <p style="margin: 0; color: #888;"><i>@entry.Alias</i></p>
+                                </div>
+                                <div>
+                                    <RadzenBadge Text="@($"{entry.Points} pts")" Color="Color.Info" Style="font-size: 1.2rem;" />
+                                </div>
+                            </div>
+
+                            <p style="margin-top: 10px;">
+                                🏅 Copas: <strong>@entry.Copas</strong><br />
+                                💯 Puntos Totales: <strong>@entry.Points</strong><br />
+                                📅 Nacimiento: @entry.FechaNacimiento.ToString("dd/MM/yyyy")
+                            </p>
+
+                            @if (!string.IsNullOrWhiteSpace(entry.FraseCelebre))
+                            {
+                                <blockquote style="color:#666; font-style: italic; margin: 0 0 0 10px;">“@entry.FraseCelebre”</blockquote>
+                            }
+                        </RadzenColumn>
+                    </RadzenRow>
+                </RadzenCard>
+            </a>
+        </Template>
+    </RadzenDataList>
+</RadzenCard>
+
+<style>
+    .title {
+        text-align: center;
+        margin-bottom: 30px;
+        font-size: 2rem;
+        color: #333;
+    }
+
+    .leader-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+        cursor: pointer;
+    }
+</style>
+
+@code {
+    private List<LeaderEntry> leaderboard = new();
+    private Dictionary<Guid, TipoCopa> TipoCopasCache { get; set; } = new();
+
+    private TipoCopa GetTipoCopa(Guid guid)
+    {
+        if (!TipoCopasCache.ContainsKey(guid))
+        {
+            TipoCopasCache[guid] = dbc.GetTipoCopa(guid);
+        }
+        return TipoCopasCache[guid];
+    }
+
+    protected override void OnInitialized()
+    {
+        leaderboard = db.Barrieros
+            .ToList()
+            .Select(b =>
+            {
+                var copas = dbc.GetCopasFromUser(b.Id);
+                var points = copas.Sum(x => (GetTipoCopa(x.TipoId)?.Prestigio ?? 0) + x.Aura);
+
+                return new LeaderEntry
+                    {
+                        DisplayName = b.DisplayName,
+                        Alias = b.Alias,
+                        Imagen = string.IsNullOrWhiteSpace(b.Imagen)
+                                    ? $"https://api.dicebear.com/7.x/bottts/svg?seed={b.Alias}"
+                                    : b.Imagen,
+                        Color = string.IsNullOrWhiteSpace(b.Color) ? "#444" : b.Color,
+                        Points = points,
+                        Copas = copas.Count(),
+                        FraseCelebre = b.FraseCelebre,
+                        FechaNacimiento = b.FechaNacimiento,
+                        BarriosGanadas = dbc.GetBarriosGanadas(b.Id).Count()
+                    };
+            })
+            .OrderByDescending(x => x.Points)
+            .ToList();
+
+        for (int i = 0; i < leaderboard.Count; i++)
+        {
+            leaderboard[i].Position = i + 1;
+        }
+    }
+
+    public class LeaderEntry
+    {
+        public int Position { get; set; }
+        public string DisplayName { get; set; }
+        public string Alias { get; set; }
+        public string Imagen { get; set; }
+        public string Color { get; set; }
+        public int Points { get; set; }
+        public int Copas { get; set; }
+        public int BarriosGanadas { get; set; }
+        public string FraseCelebre { get; set; }
+        public DateOnly FechaNacimiento { get; set; }
+    }
+}

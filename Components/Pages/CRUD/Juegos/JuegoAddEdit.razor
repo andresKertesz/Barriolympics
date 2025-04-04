@@ -1,0 +1,102 @@
+@using BarriolympicsRadzen.Data
+@using BarriolympicsRadzen.Data.Models
+@using Microsoft.EntityFrameworkCore
+
+@inject ApplicationDbContext db
+@inject DialogService dialog
+@inject NotificationService notif
+
+<RadzenRow Style="width:100%;height:auto">
+
+    <RadzenRow Style="width:100%">
+        <RadzenLabel Style="margin-top:auto;margin-bottom:auto;" Text="Nombre" />
+        <RadzenTextBox Style="width:200px" @bind-Value="@EditObject.Nombre" />
+    </RadzenRow>
+
+    <RadzenRow Style="width:100%">
+        <RadzenLabel Style="margin-top:auto;margin-bottom:auto;" Text="Descripción" />
+        <RadzenTextBox Style="width:200px" @bind-Value="@EditObject.Descripcion" />
+    </RadzenRow>
+
+    <RadzenRow Style="width:100%">
+        <RadzenLabel Style="margin-top:auto;margin-bottom:auto;" Text="Link" />
+        <RadzenTextBox Style="width:200px" @bind-Value="@EditObject.Link" />
+    </RadzenRow>
+
+    <RadzenRow Style="width:100%">
+        <RadzenLabel Style="margin-top:auto;margin-bottom:auto;" Text="Tipo de Juego" />
+        <RadzenDropDown Data="TiposJuego" TextProperty="Nombre" ValueProperty="Id"
+                        @bind-Value="@EditObject.Tipo" Style="width:200px" />
+    </RadzenRow>
+
+    <RadzenRow Style="width:100%">
+        <RadzenButton Text="Aceptar" Icon="Save" Click=Accept ButtonStyle="ButtonStyle.Primary" />
+        <RadzenButton Text="Cancelar" Icon="Cancel" ButtonStyle="ButtonStyle.Danger" />
+    </RadzenRow>
+
+</RadzenRow>
+
+@code {
+    [Parameter]
+    public bool EditMode { get; set; } = false;
+    [Parameter]
+    public Juego EditObject { get; set; }
+
+    private List<TipoJuego> TiposJuego = new();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (EditMode && EditObject == null)
+        {
+            throw new ArgumentException("EditMode necesita tener el objeto a editar...");
+        }
+        if (EditObject == null)
+        {
+            EditObject = new()
+                {
+                    Id = Guid.NewGuid()
+                };
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        TiposJuego = db.TipoJuegos.AsNoTracking().ToList();
+    }
+
+    private async Task Accept(MouseEventArgs args)
+    {
+        try
+        {
+            if (EditMode)
+            {
+                db.Juegos.Update(EditObject);
+            }
+            else
+            {
+                db.Juegos.Add(EditObject);
+            }
+
+            await db.SaveChangesAsync();
+
+            notif.Notify(new()
+                {
+                    CloseOnClick = true,
+                    Summary = "Éxito",
+                    Detail = "Cambios guardados correctamente."
+                });
+
+            dialog.Close();
+        }
+        catch (Exception ex)
+        {
+            notif.Notify(new()
+                {
+                    CloseOnClick = true,
+                    Severity = NotificationSeverity.Error,
+                    Summary = "Error",
+                    Detail = ex.ToString()
+                });
+        }
+    }
+}

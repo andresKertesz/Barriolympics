@@ -7,6 +7,8 @@ public partial class Evento
 {
     public Guid Id { get; set; }
 
+    public string Nombre { get; set; }
+
     public Guid? JuegoId { get; set; }
 
     public Guid? CompetenciaId { get; set; }

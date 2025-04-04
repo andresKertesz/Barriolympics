@@ -51,7 +51,7 @@
                                 <RadzenMenuItem Icon="@juego.Icon" Text="@juego.Nombre" Style="background"></RadzenMenuItem>
                             }
                         </RadzenMenuItem>
-                        <RadzenMenuItem Text="Barrieros" Icon="Person" Style="--rz-menu-top-item-color: white;">
+                        <RadzenMenuItem Text="Barrieros" Icon="Person" Path="/barriero" Style="--rz-menu-top-item-color: white;">
                             @foreach(var barrio in db.GetBarrieros())
                             {
                                 <RadzenMenuItem Icon="@barrio.Icon"  Click="()=>BarrieroClicked(barrio.Alias)"  Text="@barrio.Alias" Style="background"></RadzenMenuItem>

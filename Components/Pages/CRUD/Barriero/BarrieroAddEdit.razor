@@ -1,0 +1,134 @@
+@using BarriolympicsRadzen.Data
+@using BarriolympicsRadzen.Data.Models
+@inject ApplicationDbContext db
+@inject DialogService dialog
+@inject NotificationService notif
+<RadzenRow Style="width:100%;height:auto">
+
+    <RadzenRow Style="width:100%">
+        <RadzenLabel Style="margin-top:auto;margin-bottom:auto;" Text="Nombre"></RadzenLabel>
+        <RadzenTextBox Style="width:200px" @bind-Value="@EditObject.Nombre"></RadzenTextBox>
+    </RadzenRow>
+    <RadzenRow Style="width:100%">
+        <RadzenLabel Style="margin-top:auto;margin-bottom:auto;" Text="Alias"></RadzenLabel>
+        <RadzenTextBox Style="width:200px" @bind-Value="@EditObject.Alias"></RadzenTextBox>
+    </RadzenRow>
+    <RadzenRow Style="width:100%">
+        <RadzenLabel Style="margin-top:auto;margin-bottom:auto;" Text="Apellido"></RadzenLabel>
+        <RadzenTextBox Style="width:200px" @bind-Value="@EditObject.Apellido"></RadzenTextBox>
+    </RadzenRow>
+    <RadzenRow Style="width:100%">
+        <RadzenLabel Style="margin-top:auto;margin-bottom:auto;" Text="Formato "></RadzenLabel>
+        <RadzenTextBox Style="width:200px" @bind-Value="@EditObject.FormatoNombre"></RadzenTextBox>
+    </RadzenRow>
+    <RadzenRow Style="width:100%">
+        <RadzenLabel Style="margin-top:auto;margin-bottom:auto;" Text="Frase celebre "></RadzenLabel>
+        <RadzenTextBox Style="width:200px" @bind-Value="@EditObject.FraseCelebre"></RadzenTextBox>
+    </RadzenRow>
+    <RadzenRow Style="width:100%">
+        <RadzenLabel Style="margin-top:auto;margin-bottom:auto;" Text="Descripcion "></RadzenLabel>
+        <RadzenTextArea @bind-Value="@EditObject.Descripcion" Style="width: 405px"></RadzenTextArea>
+    </RadzenRow>
+    <RadzenRow Style="width:100%">
+        <RadzenLabel Style="margin-top:auto;margin-bottom:auto;" Text="Icono "></RadzenLabel>
+        <RadzenTextBox @bind-Value="@EditObject.Icon" Style="width: 405px"></RadzenTextBox>
+        <RadzenIcon Icon="@EditObject.Icon" Style="width:32px;height:32px"> </RadzenIcon>
+    </RadzenRow>
+    <RadzenRow Style="width:100%">
+        <RadzenLabel Style="margin-top:auto;margin-bottom:auto;" Text="Color "></RadzenLabel>
+        <RadzenColorPicker Value="@EditObject.Color" ShowButton=true ShowRGBA=false ValueChanged="@SetColor"></RadzenColorPicker>
+    </RadzenRow>
+    <RadzenRow Style="width:100%">
+        <RadzenLabel Style="margin-top:auto;margin-bottom:auto;" Text="Fecha Nacimiento "></RadzenLabel>
+        <RadzenDatePicker TValue="DateOnly" @bind-Value="@EditObject.FechaNacimiento"></RadzenDatePicker>
+    </RadzenRow>
+    <RadzenRow Style="width:100%">
+        <RadzenLabel Style="margin-top:auto;margin-bottom:auto;" Text="Fecha Incorporacion "></RadzenLabel>
+        <RadzenDatePicker TValue="DateOnly" @bind-Value="@EditObject.FechaIncorporacion"></RadzenDatePicker>
+    </RadzenRow>
+    <RadzenRow Style="width:100%">
+        <RadzenLabel Style="margin-top:auto;margin-bottom:auto;" Text="Imagen (Subida directo al server)"></RadzenLabel>
+        <RadzenTextBox Style="width:200px" @bind-Value="@EditObject.Imagen"></RadzenTextBox>
+    </RadzenRow>
+
+    <RadzenRow Style="width:100%">
+        <RadzenButton Text="Aceptar" Icon="Save" Click=Accept ButtonStyle="ButtonStyle.Primary"></RadzenButton>
+
+        <RadzenButton Text="Cancelar" Icon="Cancel" ButtonStyle="ButtonStyle.Danger"></RadzenButton>
+
+    </RadzenRow>
+
+</RadzenRow>
+
+
+@code {
+    [Parameter]
+    public bool EditMode { get; set; } = false;
+    [Parameter]
+    public Barriero EditObject {get; set;}
+
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if(EditMode && EditObject == null)
+        {
+            throw new ArgumentException("Editmode necesita tener el objeto a editar...");
+        }
+        if(EditObject == null)
+        {
+            EditObject = new()
+            {
+                Id =Guid.NewGuid()
+            };
+        }
+
+    }
+
+    void SetColor(string color)
+    {
+        var hex = "#"+Radzen.Blazor.Rendering.RGB.Parse(color).ToHex().ToLower();
+        EditObject.Color = hex;
+
+    }
+
+    protected override async Task OnInitializedAsync(){
+
+
+        await base.OnInitializedAsync();
+    }
+
+    private async Task Accept(MouseEventArgs args)
+    {
+        try{
+            if (EditMode)
+            {
+                db.Barrieros.Update(EditObject);
+            }
+            else
+            {
+                db.Barrieros.Add(EditObject);
+            }
+
+            await db.SaveChangesAsync();
+            notif.Notify(new()
+            {
+                CloseOnClick = true,
+                Summary = "Exito",
+                Detail = "Cambios guardados correctamente."
+            });
+            dialog.Close();
+        }
+        catch (Exception ex)
+        {
+
+            notif.Notify(new()
+                {
+                    CloseOnClick = true,
+                    Severity = NotificationSeverity.Error,
+                    Summary = "Error",
+                    Detail = ex.ToString()
+                });
+        }
+        }
+    }
+}
