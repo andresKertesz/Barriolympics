@@ -9,7 +9,9 @@ public partial class ImagenesJuego
 
     public Guid JuegoId { get; set; }
 
-    public Guid Descripcion { get; set; }
+    public string Descripcion { get; set; }
+
+    public string Url { get; set; }
 
     public virtual Juego Juego { get; set; }
 }

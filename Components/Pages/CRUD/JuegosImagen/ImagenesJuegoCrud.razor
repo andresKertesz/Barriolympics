@@ -1,22 +1,24 @@
+@page "/imagenes-juego"
+
 @using BarriolympicsRadzen.Data
 @using BarriolympicsRadzen.Data.Models
 @using BarriolympicsRadzen.Controllers
 
 @inject AuthenticationController auth
-@inject DatabaseController db
+@inject BarriolympicsRadzen.Controllers.DatabaseController db
 @inject ApplicationDbContext dbContext
 @inject NavigationManager nav
 @inject DialogService dialog
 @inject NotificationService notif
 
-<h3>Eventos</h3>
+<h3>Imágenes por Juego</h3>
 
 <RadzenStack Orientation="Radzen.Orientation.Vertical">
     <RadzenRow Style="width:100%">
         <RadzenButton Style="width: 100px" ButtonStyle="Radzen.ButtonStyle.Success" Text="Nuevo" Click="Add" Icon="add_circle" />
     </RadzenRow>
 
-    <RadzenDataGrid AllowSorting=true AllowFiltering=true TItem="Evento" Data="eventos">
+    <RadzenDataGrid TItem="ImagenesJuego" Data="imagenes">
         <Columns>
             <RadzenDataGridColumn Title="Acciones" Width="150px">
                 <Template Context="element">
@@ -25,42 +27,29 @@
                 </Template>
             </RadzenDataGridColumn>
 
-            <RadzenDataGridColumn Property="Nombre" Sortable=true Filterable=true Title="Nombre" />
-            <RadzenDataGridColumn Property="Fecha" Title="Fecha" />
-            <RadzenDataGridColumn Title="Juego">
+            <RadzenDataGridColumn Title="Imagen">
                 <Template Context="element">
-                    <RadzenLabel Text="@GetJuegoNombre(element.JuegoId)" />
+                    <img src="@element.Url" style="width: 100px; height: auto;" />
                 </Template>
             </RadzenDataGridColumn>
-            <RadzenDataGridColumn Title="Competencia" Sortable=true Filterable=true FilterMode="FilterMode.Simple" SortProperty="Competencia.Nombre">
-                <Template Context="element">
-                    <RadzenLabel Text="@GetCompetenciaNombre(element.CompetenciaId)" />
-                </Template>
-            </RadzenDataGridColumn>
+            <RadzenDataGridColumn Property="Descripcion" Title="Descripción" />
+            <RadzenDataGridColumn Property="JuegoId" Title="Juego" />
         </Columns>
     </RadzenDataGrid>
 </RadzenStack>
 
 @code {
-    private List<Evento> eventos;
+    private List<ImagenesJuego> imagenes;
 
     protected override Task OnInitializedAsync()
     {
         if (auth.GetLoggedInUser() == null)
+        {
             nav.NavigateTo("/");
+        }
 
-        eventos = dbContext.Eventos.ToList();
+        imagenes = dbContext.ImagenesJuegos.ToList();
         return base.OnInitializedAsync();
-    }
-
-    private string GetJuegoNombre(Guid? id)
-    {
-        return dbContext.Juegos.FirstOrDefault(x => x.Id == id)?.Nombre ?? "Sin juego";
-    }
-
-    private string GetCompetenciaNombre(Guid? id)
-    {
-        return dbContext.Competencia.FirstOrDefault(x => x.Id == id)?.Nombre ?? "Sin competencia";
     }
 
     protected async Task Add()
@@ -68,31 +57,31 @@
         await LaunchDialog();
     }
 
-    protected async Task Edit(Evento evento)
+    protected async Task Edit(ImagenesJuego imagen)
     {
-        await LaunchDialog(evento);
+        await LaunchDialog(imagen);
     }
 
-    private async Task LaunchDialog(Evento? evento = null)
+    private async Task LaunchDialog(ImagenesJuego? imagen = null)
     {
-        await dialog.OpenAsync<EventoAddEdit>(evento == null ? "Crear" : $"Editar {evento.Nombre}", new()
+        await dialog.OpenAsync<ImagenesJuegoAddEdit>(imagen == null ? "Crear" : "Editar Imagen", new()
         {
-            { "EditMode", evento != null },
-            { "EditObject", evento }
+            { "EditMode", imagen != null },
+            { "EditObject", imagen }
         },
         new()
             {
-                Width = "400px",
+                Width = "500px",
                 Height = "auto",
                 Resizable = false
             });
 
-        eventos = dbContext.Eventos.ToList();
+        imagenes = dbContext.ImagenesJuegos.ToList();
     }
 
-    protected async Task Delete(Evento evento)
+    protected async Task Delete(ImagenesJuego imagen)
     {
-        var confirmed = await dialog.Confirm($"¿Borrar {evento.Nombre}?", "Eliminar", new ConfirmOptions
+        var confirmed = await dialog.Confirm($"\u00bfBorrar imagen?", "Eliminar", new ConfirmOptions
             {
                 OkButtonText = "Sí",
                 CancelButtonText = "No"
@@ -102,22 +91,22 @@
         {
             try
             {
-                dbContext.Eventos.Remove(evento);
+                dbContext.ImagenesJuegos.Remove(imagen);
                 await dbContext.SaveChangesAsync();
 
-                notif.Notify(new()
+                notif.Notify(new NotificationMessage
                     {
                         CloseOnClick = true,
                         Severity = NotificationSeverity.Success,
                         Summary = "Éxito",
-                        Detail = "Evento eliminado correctamente"
+                        Detail = "Imagen eliminada correctamente"
                     });
 
-                eventos = dbContext.Eventos.ToList();
+                imagenes = dbContext.ImagenesJuegos.ToList();
             }
             catch (Exception ex)
             {
-                notif.Notify(new()
+                notif.Notify(new NotificationMessage
                     {
                         CloseOnClick = true,
                         Severity = NotificationSeverity.Error,

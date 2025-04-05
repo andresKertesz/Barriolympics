@@ -18,12 +18,12 @@
 
     <RadzenRow Style="width:100%">
         <RadzenLabel Style="margin-top:auto;margin-bottom:auto;" Text="Juego" />
-        <RadzenDropDown AllowClear="true" Data="Juegos" TextProperty="Nombre" ValueProperty="Id" @bind-Value="@EditObject.JuegoId" />
+        <RadzenDropDown AllowClear="true" Data="Juegos" TextProperty="Nombre" ValueProperty="Id" Change="@OnCompetenciaChanged" @bind-Value="@EditObject.JuegoId" />
     </RadzenRow>
 
     <RadzenRow Style="width:100%">
         <RadzenLabel Style="margin-top:auto;margin-bottom:auto;" Text="Competencia" />
-        <RadzenDropDown AllowClear="true" Data="Competencias" TextProperty="Nombre" ValueProperty="Id" @bind-Value="@EditObject.CompetenciaId" />
+        <RadzenDropDown AllowClear="true" Data="Competencias" TValue="Guid?" TextProperty="Nombre" Change="@OnCompetenciaChanged" ValueProperty="Id" @bind-Value="@EditObject.CompetenciaId" />
     </RadzenRow>
 
     <RadzenRow Style="width:100%">
@@ -66,6 +66,22 @@
                 };
         }
     }
+    private void OnCompetenciaChanged()
+    {
+        SetAutoName();
+    }
+
+    private void SetAutoName()
+    {
+        var comp = Competencias.Where(x => x.Id == EditObject.CompetenciaId).FirstOrDefault();
+        var game = Juegos.Where(x => x.Id == EditObject.JuegoId).FirstOrDefault();
+
+        if(comp != null && game != null)
+        {
+            EditObject.Nombre = $"{game.Nombre} {comp.Nombre}";
+        }
+    }
+
 
     private async Task Accept(MouseEventArgs args)
     {

@@ -1,0 +1,192 @@
+@page "/juego/{Id:guid}"
+@using BarriolympicsRadzen.Data
+@using BarriolympicsRadzen.Data.Models
+@using Microsoft.EntityFrameworkCore
+@inject ApplicationDbContext dbContext
+@inject NavigationManager nav
+@inject DialogService DialogService
+
+<PageTitle>@(juego?.Nombre ?? "Detalles del juego")</PageTitle>
+
+<RadzenContent Container="main">
+    @if (juego == null)
+    {
+        <div class="rz-p-12 rz-text-align-center">
+            <RadzenProgressBar Value="100" ShowValue="false" Mode="ProgressBarMode.Indeterminate" Style="width: 100%; height: 4px;" />
+        </div>
+    }
+    else
+    {
+        <RadzenCard class="rz-shadow-2 rz-border-radius-4 rz-p-0 rz-mb-8">
+            <RadzenStack Orientation="Orientation.Horizontal"
+            AlignItems="AlignItems.Center"
+            JustifyContent="JustifyContent.SpaceBetween"
+            class="rz-background-color-primary rz-color-white rz-p-4 rz-border-radius-4" Style="background-color: #60c6d7">
+                <RadzenText TextStyle="TextStyle.H3" class="rz-mb-0">@juego.Nombre</RadzenText>
+                <RadzenBadge BadgeStyle="BadgeStyle.Light" Text="@juego.TipoNavigation?.Nombre" class="rz-color-dark" />
+            </RadzenStack>
+
+            <div class="rz-p-4">
+                <RadzenRow Gap="1rem">
+                    <RadzenColumn Size="12" SizeMD="8">
+                        <RadzenText TextStyle="TextStyle.H5" class="rz-mb-3">Descripción</RadzenText>
+                        <RadzenText TextStyle="TextStyle.Body1" class="rz-mb-4">@juego.Descripcion</RadzenText>
+
+                        @if (!string.IsNullOrEmpty(juego.Link))
+                        {
+                            <RadzenLink Path="@juego.Link" Target="_blank" Text="Official Link" Icon="launch" class="rz-mt-2" />
+                        }
+                    </RadzenColumn>
+
+                    <RadzenColumn Size="12" SizeMD="4">
+                        @if (juego.ImagenesJuegos.Any())
+                        {
+                            <RadzenImage Path="@juego.ImagenesJuegos.First().Url" Style="width: 100%; border-radius: 4px;" />
+                        }
+                    </RadzenColumn>
+                </RadzenRow>
+
+                @if (juego.ImagenesJuegos.Count > 1)
+                {
+                    <RadzenStack class="rz-mt-6">
+                        <RadzenText TextStyle="TextStyle.H5" class="rz-mb-4">Game Images</RadzenText>
+                        <RadzenRow Gap="1rem">
+                            @foreach (var image in juego.ImagenesJuegos.Skip(1))
+                            {
+                                <RadzenColumn Size="6" SizeSM="4" SizeMD="3" class="rz-mb-4">
+                                    <RadzenCard class="rz-p-0 rz-cursor-pointer" Style="height: 100%;">
+                                        <RadzenImage Path="@image.Url" Style="width: 100%; height: 120px; object-fit: cover;" Click="@(()=>ShowImageDialog(image))"/>
+                                        @if (!string.IsNullOrEmpty(image.Descripcion))
+                                        {
+                                            <div class="rz-p-2">
+                                                <RadzenText TextStyle="TextStyle.Caption">@image.Descripcion</RadzenText>
+                                            </div>
+                                        }
+                                    </RadzenCard>
+                                </RadzenColumn>
+                            }
+                        </RadzenRow>
+                    </RadzenStack>
+                }
+
+                @if (juego.Eventos.Any())
+                {
+                    <RadzenStack class="rz-mt-6">
+                        <RadzenText TextStyle="TextStyle.H5" class="rz-mb-4">Competitions & Events</RadzenText>
+
+                        <RadzenDataGrid Data="@juego.Eventos.OrderByDescending(e => e.Fecha)"
+                        TItem="Evento"
+                        AllowPaging="true"
+                        PageSize="5"
+                        AllowSorting="true"
+                        class="rz-shadow-0">
+                            <Columns>
+                                <RadzenDataGridColumn TItem="Evento" Property="Nombre" Title="Nombre Evento" />
+                                <RadzenDataGridColumn TItem="Evento" Property="Fecha" Title="Fecha" FormatString="{0:dd/MM/yyyy}" />
+                                <RadzenDataGridColumn TItem="Evento" Property="Competencia.Nombre" Title="Competencia">
+                                    <Template Context="evento">
+                                        @if (evento.Competencia != null)
+                                        {
+                                            @evento.Competencia.Nombre
+                                        }
+                                        else
+                                        {
+                                            <RadzenText TextStyle="TextStyle.Body1" class="rz-color-info">N/A</RadzenText>
+                                        }
+                                    </Template>
+                                </RadzenDataGridColumn>
+                                <RadzenDataGridColumn TItem="Evento" Title="Evento" Filterable="false" Sortable="false" TextAlign="TextAlign.Center" Width="100px">
+                                    <Template Context="evento">
+                                        <RadzenButton ButtonStyle="ButtonStyle.Info"
+                                        Icon="visibility"
+                                        Size="ButtonSize.Small"
+                                        Click="@(() => NavigateToEvent(evento.Id))" />
+                                    </Template>
+                                </RadzenDataGridColumn>
+                                <RadzenDataGridColumn Title="Ganador">
+                                    <Template Context="element">
+                                        @{
+                                            var ganador = GetGanadorEvent(element);
+                                        }
+                                        @if(ganador == null)
+                                        {
+                                            <RadzenLabel Text="A definir."></RadzenLabel>
+                                        }
+                                        else
+                                        {
+                                            <RadzenLink Text="@ganador.DisplayName" Path=@($"/barriero/{ganador.Alias}")></RadzenLink>
+                                            
+                                        }
+
+                                    </Template>
+
+                                </RadzenDataGridColumn>
+                            </Columns>
+                        </RadzenDataGrid>
+                    </RadzenStack>
+                }
+                else
+                {
+                    <RadzenAlert AlertStyle="AlertStyle.Info" ShowIcon="true" class="rz-mt-6">
+                        No events recorded for this game yet.
+                    </RadzenAlert>
+                }
+
+                <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" class="rz-mt-6">
+                    <RadzenButton ButtonStyle="ButtonStyle.Secondary"
+                    Icon="arrow_back"
+                    Text="Volver a juegos"
+                    Click="@(() => nav.NavigateTo("/juego"))" />
+                </RadzenStack>
+            </div>
+        </RadzenCard>
+    }
+</RadzenContent>
+
+@code {
+    [Parameter]
+    public Guid Id { get; set; }
+
+    private Juego? juego;
+
+    protected override void OnInitialized()
+    {
+        juego = dbContext.Juegos
+            .Include(j => j.TipoNavigation)
+            .Include(j => j.Eventos)
+                .ThenInclude(e => e.Competencia)
+            .Include(j => j.ImagenesJuegos)
+            .FirstOrDefault(j => j.Id == Id);
+
+        if (juego == null)
+        {
+            nav.NavigateTo("/not-found");
+        }
+    }
+
+    private void NavigateToEvent(Guid eventoId)
+    {
+        nav.NavigateTo($"/evento/{eventoId}");
+    }
+    private Barriero? GetGanadorEvent(Evento evento){
+
+        var barriero = dbContext.Copas.AsNoTracking().Where(x => x.EventoId == evento.Id).FirstOrDefault().BarrieroId;
+        return dbContext.Barrieros.AsNoTracking().Where(y => y.Id == barriero).FirstOrDefault();
+    }
+    private async Task ShowImageDialog(ImagenesJuego image)
+    {
+        await DialogService.OpenAsync<ImageViewer>(
+            "Image View",
+            new Dictionary<string, object>
+                {
+                { "ImageUrl", image.Url },
+                { "ImageDescription", image.Descripcion }
+                },
+            new DialogOptions
+                {
+                    Width = "700px",
+                    Height = "570px",
+                    CloseDialogOnOverlayClick = true
+                });
+    }
+}

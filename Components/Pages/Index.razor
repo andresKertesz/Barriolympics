@@ -1,6 +1,16 @@
 @page "/"
+@using BarriolympicsRadzen.Data
 @using BarriolympicsRadzen.Data.Models
+@inject ApplicationDbContext db
 <RadzenText Text="Index"></RadzenText>
-@code {
 
+<BarriolympicsRadzen.Components.Pages.Juego.JuegoCard SelectedGame="juego"></BarriolympicsRadzen.Components.Pages.Juego.JuegoCard>
+
+@code {
+    BarriolympicsRadzen.Data.Models.Juego juego { get; set; }
+    protected override Task OnParametersSetAsync()
+    {
+        juego = db.Juegos.FirstOrDefault();
+        return base.OnParametersSetAsync();
+    }
 }

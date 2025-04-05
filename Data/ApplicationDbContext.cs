@@ -24,6 +24,8 @@ public partial class ApplicationDbContext : DbContext
 
     public virtual DbSet<Evento> Eventos { get; set; }
 
+    public virtual DbSet<GetWinsPerCup> GetWinsPerCups { get; set; }
+
     public virtual DbSet<ImagenesJuego> ImagenesJuegos { get; set; }
 
     public virtual DbSet<Juego> Juegos { get; set; }
@@ -151,11 +153,26 @@ public partial class ApplicationDbContext : DbContext
                 .HasConstraintName("FK_Evento_Juego");
         });
 
+        modelBuilder.Entity<GetWinsPerCup>(entity =>
+        {
+            entity
+                .HasNoKey()
+                .ToView("GetWinsPerCup");
+        });
+
         modelBuilder.Entity<ImagenesJuego>(entity =>
         {
             entity.ToTable("ImagenesJuego");
 
             entity.Property(e => e.Id).ValueGeneratedNever();
+            entity.Property(e => e.Descripcion)
+                .IsRequired()
+                .HasMaxLength(500)
+                .IsUnicode(false);
+            entity.Property(e => e.Url)
+                .IsRequired()
+                .HasMaxLength(500)
+                .IsUnicode(false);
 
             entity.HasOne(d => d.Juego).WithMany(p => p.ImagenesJuegos)
                 .HasForeignKey(d => d.JuegoId)

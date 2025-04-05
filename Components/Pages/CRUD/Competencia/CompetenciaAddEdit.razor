@@ -1,5 +1,6 @@
 @using BarriolympicsRadzen.Data
 @using BarriolympicsRadzen.Data.Models
+@using Microsoft.EntityFrameworkCore
 @inject ApplicationDbContext db
 @inject DialogService dialog
 @inject NotificationService notif
@@ -19,8 +20,8 @@
         <RadzenDatePicker TValue="DateOnly" Style="width:200px" @bind-Value="@EditObject.Fecha"></RadzenDatePicker>
     </RadzenRow>
     <RadzenRow Style="width:100%">
-        <RadzenLabel Style="margin-top:auto;margin-bottom:auto;" Text="Fecha"></RadzenLabel>
-        <RadzenDropDown Data="db.TipoCompetencia.ToList()" Style="width:200px" TextProperty="Nombre" ValueProperty="Id" @bind-Value="@EditObject.Tipo"></RadzenDropDown>
+        <RadzenLabel Style="margin-top:auto;margin-bottom:auto;" Text="Tipo"></RadzenLabel>
+        <RadzenDropDown Data="tipoCompetencia" Style="width:200px" TextProperty="Nombre" ValueProperty="Id" @bind-Value="@EditObject.Tipo"></RadzenDropDown>
     </RadzenRow>
 
     <RadzenRow Style="width:100%">
@@ -39,6 +40,8 @@
     [Parameter]
     public Competencium EditObject {get; set;}
 
+    private List<TipoCompetencium> tipoCompetencia { get; set; }
+
 
     protected override async Task OnParametersSetAsync()
     {
@@ -53,7 +56,7 @@
                 Id = Guid.NewGuid()
             };
         }
-
+        tipoCompetencia = db.TipoCompetencia.AsNoTracking().ToList();
     }
 
     private async Task Accept(MouseEventArgs args)

@@ -1,7 +1,7 @@
 ﻿using BarriolympicsRadzen.Data;
 using BarriolympicsRadzen.Data.Models;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-
+using Microsoft.EntityFrameworkCore;
 namespace BarriolympicsRadzen.Controllers
 {
     public class DatabaseController
@@ -27,22 +27,22 @@ namespace BarriolympicsRadzen.Controllers
         public Barriero? GetBarriero(string DisplayName)
         {
 
-            return _dbContext.Barrieros.Where(x => x.Alias == DisplayName).FirstOrDefault();
+            return _dbContext.Barrieros.AsNoTracking().Where(x => x.Alias == DisplayName).FirstOrDefault();
         }
         public List<TipoCompetencium> GetTipoEventos() 
         {
-            return _dbContext.TipoCompetencia.OrderBy(x=> x.Jerarquia).ToList();
+            return _dbContext.TipoCompetencia.AsNoTracking().OrderBy(x=> x.Jerarquia).ToList();
         }
         
         public List<TipoJuego> GetTipoJuegos() 
         {
-            return _dbContext.TipoJuegos.ToList();
+            return _dbContext.TipoJuegos.AsNoTracking().ToList();
         }
 
         public List<Copa> GetBarriosGanadas(Guid guid)
         {
             return _dbContext.Copas.Where(x => x.BarrieroId == guid).
-                Where(x=>x.Evento.Competencia.TipoNavigation.Nombre == "Barriolympics").ToList();
+                Where(x=>x.Evento.Competencia.TipoNavigation.Nombre == "Barriolympics" && x.Evento.JuegoId == null).ToList();
         }
 
         public List<Copa> GetCopasFromUser(Guid userId)

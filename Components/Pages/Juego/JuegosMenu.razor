@@ -1,0 +1,33 @@
+@page "/juego"
+@using BarriolympicsRadzen.Data.Models
+@using Microsoft.EntityFrameworkCore
+@inject BarriolympicsRadzen.Data.ApplicationDbContext db
+    <RadzenRow>
+        <RadzenText Text="Juegos" TextStyle="Radzen.Blazor.TextStyle.DisplayH3" />
+    </RadzenRow>
+    <RadzenRow Style="height: auto; margin-top: 30px">
+        <RadzenStack Style="width: 100%; max-width: 1920px; margin-left: auto; margin-right: auto">
+
+            @foreach(var juego in juegos){
+                <JuegoCard SelectedGame=juego></JuegoCard>
+            }
+
+        </RadzenStack>
+    </RadzenRow>
+
+@code {
+    List<Juego> juegos = new();
+    List<TipoJuego> tipoJuegos = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        juegos = db.Juegos
+            .Include(j => j.TipoNavigation)
+            .Include(j => j.Eventos)
+            .Include(j => j.ImagenesJuegos)
+            .ToList();
+
+        tipoJuegos = db.TipoJuegos.AsNoTracking().ToList();
+
+    }
+}

@@ -1,0 +1,28 @@
+﻿@inject DialogService DialogService
+
+<div class="rz-p-0">
+    <RadzenStack>
+        <RadzenImage Path="@ImageUrl" Style="width: 100%; max-height: 500px; object-fit: contain;" />
+
+        @if (!string.IsNullOrEmpty(ImageDescription))
+        {
+            <div class="rz-p-4 rz-background-color-light">
+                <RadzenText TextStyle="TextStyle.Body1">
+                    @ImageDescription
+                </RadzenText>
+            </div>
+        }
+
+        <div class="rz-p-4 rz-text-align-center">
+            <RadzenButton ButtonStyle="ButtonStyle.Secondary" Icon="close" Text="Close" Click="@(() => DialogService.Close(true))" />
+        </div>
+    </RadzenStack>
+</div>
+
+@code {
+    [Parameter]
+    public string ImageUrl { get; set; } = "";
+
+    [Parameter]
+    public string ImageDescription { get; set; } = "";
+}

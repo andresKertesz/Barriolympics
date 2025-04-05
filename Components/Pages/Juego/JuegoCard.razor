@@ -1,0 +1,126 @@
+@using BarriolympicsRadzen.Data
+@using BarriolympicsRadzen.Data.Models
+@using Microsoft.EntityFrameworkCore
+@using System.Text
+@inject IJSRuntime JSRuntime
+@inject NavigationManager NavigationManager
+@inject ApplicationDbContext db
+@inject DialogService DialogService
+@inject ContextMenuService ContextMenuService
+@inject TooltipService TooltipService
+@inject NotificationService NotificationService
+
+<RadzenCard Variant="Radzen.Variant.Filled"e>
+    <RadzenRow>
+        <RadzenColumn Size="8">
+            <RadzenRow>
+                <RadzenText Text="@SelectedGame.Nombre"  Style="width: auto; height: 100%; margin-bottom: 10px" TextStyle="Radzen.Blazor.TextStyle.DisplayH4" />
+                <RadzenButton Icon="visibility" Style="height:32px; margin-top: auto; margin-bottom:auto" Click="NavigateToGame" ></RadzenButton>
+            </RadzenRow>
+            <RadzenRow Style="margin-bottom: 10px">
+                <RadzenBadge Text="@($"{tipoJuego.Nombre}")" Variant="Radzen.Variant.Filled" BadgeStyle="Radzen.BadgeStyle.Secondary"></RadzenBadge>
+            </RadzenRow>
+            <RadzenRow>
+                <RadzenText Style="width: 100%; height: auto" Text="@SelectedGame.Descripcion" />
+            </RadzenRow>
+            <RadzenRow Style="margin-top: auto">
+                <RadzenText Text="🏅 Más victorias:" TextStyle="Radzen.Blazor.TextStyle.Subtitle1" Style="height: 100%; width: auto" />
+                <RadzenText Text="@(GetMostVictories())" TextStyle="Radzen.Blazor.TextStyle.Subtitle1" Style="height: 100%; width: auto" />
+            </RadzenRow>
+            <RadzenRow Style="margin-top: auto">
+                <RadzenText Text="📅 Última aparición:" TextStyle="Radzen.Blazor.TextStyle.Subtitle1" Style="height: 100%; width: auto" />
+                <RadzenText Text="@(LastAppearance())" TextStyle="Radzen.Blazor.TextStyle.Subtitle1" Style="height: 100%; width: auto" />
+            </RadzenRow>
+        </RadzenColumn>
+        <RadzenColumn Size="4">
+            <RadzenRow Style="width: 100%; height: 100%; margin-bottom: au">
+                <RadzenCarousel Style="width: 100%; height: 210px; max-width: 350px; margin-top: auto; margin-bottom: auto; margin-left: auto; margin-right: auto">
+                    <Items>
+
+                        @foreach(var image in imagenes)
+                        {
+
+                            <RadzenCarouselItem>
+                                <RadzenImage Path="@image.Url" Style="object-fit:contain; width:100%;height:100%"></RadzenImage>   
+                            </RadzenCarouselItem>
+                        }
+                    </Items>
+                </RadzenCarousel>
+            </RadzenRow>
+        </RadzenColumn>
+    </RadzenRow>
+</RadzenCard>
+
+<style>
+
+
+    .rz-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border-radius: 16px;
+    }
+
+    .rz-card:hover {
+    transform: translateY(-5px) scale(1.02);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+    }
+
+
+
+
+</style>
+
+@code {
+    private List<ImagenesJuego> imagenes { get; set; }
+    private TipoJuego tipoJuego { get; set; }
+    private List<Barriero> barrieros { get; set; }
+    [Parameter,EditorRequired]
+    public Juego SelectedGame { get; set; }
+
+    private string GetMostVictories()
+    {
+        var winsPerCup = db.GetWinsPerCups.Where(x => x.IdJuego == SelectedGame.Id).ToList();
+        winsPerCup = winsPerCup.Where(y => y.CantidadCopas == winsPerCup.Max(x=>x.CantidadCopas)).ToList();
+        if(winsPerCup.Count == 0)
+        {
+            return "Nadie.";
+        }
+        List<string> entries = new();
+        foreach(var player in winsPerCup)
+        {
+            Barriero? barriero = barrieros.Where(b => b.Id == player.IdBarriero).FirstOrDefault();
+            if(barriero == null)
+            {
+                continue;
+            }
+            entries.Add($"{barriero.DisplayName} ({player.CantidadCopas})");
+        }
+        return string.Join(" , ", entries.ToArray());
+
+    }
+    void NavigateToGame()
+    {
+        NavigationManager.NavigateTo($"/juego/{SelectedGame.Id}");
+    }
+
+    private string LastAppearance()
+    {
+        var lastAppearanceData = db.Eventos.Where(g => g.JuegoId == SelectedGame.Id).OrderByDescending(x => x.Fecha).FirstOrDefault();
+        if(lastAppearanceData == null)
+        {
+            return "Nunca se jugó.";
+        }
+        else
+        {
+            return lastAppearanceData.Fecha.ToString("dd/MM/yyyy");
+        }
+    }
+
+    protected override Task OnParametersSetAsync()
+    {
+        tipoJuego = db.TipoJuegos.AsNoTracking().Where(x => x.Id == SelectedGame.Tipo).FirstOrDefault();
+        imagenes = db.ImagenesJuegos.AsNoTracking().Where(y => y.JuegoId == SelectedGame.Id).ToList();
+        barrieros = db.Barrieros.AsNoTracking().ToList();
+        return base.OnParametersSetAsync();
+
+    }
+}

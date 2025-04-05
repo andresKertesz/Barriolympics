@@ -45,12 +45,7 @@
                                 <RadzenMenuItem Icon="@comp.Icon" Text="@comp.Nombre" Style="background"></RadzenMenuItem>
                             }
                         </RadzenMenuItem>
-                        <RadzenMenuItem Text="Juegos" Icon="Games" Style="--rz-menu-top-item-color: white;">
-                            @foreach (var juego in db.GetTipoJuegos())
-                            {
-                                <RadzenMenuItem Icon="@juego.Icon" Text="@juego.Nombre" Style="background"></RadzenMenuItem>
-                            }
-                        </RadzenMenuItem>
+                        <RadzenMenuItem Text="Juegos" Icon="Games" Path="/juego" Style="--rz-menu-top-item-color: white;"></RadzenMenuItem>
                         <RadzenMenuItem Text="Barrieros" Icon="Person" Path="/barriero" Style="--rz-menu-top-item-color: white;">
                             @foreach(var barrio in db.GetBarrieros())
                             {

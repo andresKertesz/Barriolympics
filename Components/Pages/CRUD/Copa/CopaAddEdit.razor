@@ -24,17 +24,17 @@
         <RadzenLabel Style="margin-top:auto;margin-bottom:auto;" Text="Ganador"></RadzenLabel>
         <RadzenDropDown Data="Barrieros" TextProperty="Alias" ValueProperty="Id" @bind-Value="@EditObject.BarrieroId"></RadzenDropDown>
     </RadzenRow>
-    
+
     <RadzenRow Style="width:100%">
         <RadzenLabel Style="margin-top:auto;margin-bottom:auto;" Text="Tipo"></RadzenLabel>
         <RadzenDropDown Data="TipoCopas" TextProperty="Nombre" ValueProperty="Id" @bind-Value="@EditObject.TipoId"></RadzenDropDown>
     </RadzenRow>
-    
+
     <RadzenRow Style="width:100%">
         <RadzenLabel Style="margin-top:auto;margin-bottom:auto;" Text="Evento"></RadzenLabel>
-        <RadzenDropDown AllowClear=true Data="Eventos" TextProperty="Nombre" ValueProperty="Id" @bind-Value="@EditObject.EventoId"></RadzenDropDown>
+        <RadzenDropDown AllowClear=true Data="Eventos" TextProperty="Nombre" ValueProperty="Id" Change="@OnEventoChanged" @bind-Value="@EditObject.EventoId"></RadzenDropDown>
     </RadzenRow>
-    
+
 
     <RadzenRow Style="width:100%">
         <RadzenButton Text="Aceptar" Icon="Save" Click=Accept ButtonStyle="ButtonStyle.Primary"></RadzenButton>
@@ -56,6 +56,14 @@
     private List<TipoCopa> TipoCopas = new();
     private List<Evento> Eventos = new();
 
+    void OnEventoChanged()
+    {
+        var eventObject = Eventos.Where(x => x.Id == EditObject.EventoId).FirstOrDefault();
+        EditObject.Nombre = eventObject.Nombre;
+        EditObject.FechaGanada = eventObject.Fecha;
+        EditObject.TipoId = eventObject.CompetenciaId != null && eventObject.JuegoId != null ? TipoCopas.Where(x => x.Nombre == "Evento Barrio").FirstOrDefault().Id: TipoCopas.Where(x => x.Nombre == "Barriolympics").FirstOrDefault().Id;
+    }
+
     protected override async Task OnParametersSetAsync()
     {
         if(EditMode && EditObject == null)
@@ -72,12 +80,17 @@
 
 
     }
-
+    private List<Copa> GetCopaFromEvento(Guid eventId)
+    {
+        return db.Copas.AsNoTracking().Where(c => c.EventoId == eventId).ToList();
+    }
     protected override async Task OnInitializedAsync()
     {
         Barrieros = db.Barrieros.AsNoTracking().ToList();
         TipoCopas = db.TipoCopas.AsNoTracking().ToList();
         Eventos = db.Eventos.AsNoTracking().ToList();
+
+        Eventos = Eventos.Where(x => !GetCopaFromEvento(x.Id).Any()).ToList();
     }
 
     private async Task Accept(MouseEventArgs args)
